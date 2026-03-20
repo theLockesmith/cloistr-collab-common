@@ -1,0 +1,65 @@
+{
+  "name": "@cloistr/collab-common",
+  "version": "0.1.0",
+  "description": "Shared collaboration infrastructure for Cloistr apps",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./auth": "./dist/auth/index.js",
+    "./storage": "./dist/storage/index.js",
+    "./relay": "./dist/relay/index.js",
+    "./crdt": "./dist/crdt/index.js",
+    "./presence": "./dist/presence/index.js",
+    "./sharing": "./dist/sharing/index.js",
+    "./versioning": "./dist/versioning/index.js",
+    "./components": "./dist/components/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src --ext ts,tsx",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@types/libsodium-wrappers": "^0.7.14",
+    "lib0": "^0.2.97",
+    "libsodium-wrappers": "^0.8.2",
+    "nostr-tools": "^2.10.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "keywords": [
+    "cloistr",
+    "nostr",
+    "collaboration",
+    "crdt",
+    "yjs",
+    "e2e-encryption"
+  ],
+  "author": "Coldforge LLC",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git@git.coldforge.xyz:coldforge/cloistr-collab-common.git"
+  }
+}
