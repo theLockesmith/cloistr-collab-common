@@ -342,7 +342,7 @@ export class DocumentPersistence {
           pubkey: event.pubkey,
         };
         const signed = await this.config.signer.signEvent(unsigned);
-        return signed.sig;
+        return { id: signed.id, sig: signed.sig };
       },
     };
   }

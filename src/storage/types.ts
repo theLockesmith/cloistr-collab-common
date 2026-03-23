@@ -65,11 +65,21 @@ export class BlossomError extends Error {
 }
 
 /**
+ * Signed event with id and signature
+ */
+export interface SignedEventResult {
+  /** Event ID (sha256 hash of serialized event) */
+  id: string;
+  /** Signature of the event ID */
+  sig: string;
+}
+
+/**
  * Signer interface for creating authentication signatures
  */
 export interface StorageSignerInterface {
   /** Get the public key as hex string */
   getPublicKey(): Promise<string>;
-  /** Sign an event and return the signature as hex string */
-  signEvent(event: any): Promise<string>;
+  /** Sign an event and return the signed event with id and sig */
+  signEvent(event: any): Promise<SignedEventResult>;
 }

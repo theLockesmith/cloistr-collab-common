@@ -44,13 +44,8 @@ export class BlobStore {
       // Calculate SHA-256 hash of the content
       const hash = await sha256(data);
 
-      // Create NIP-98 auth event
-      const authHeader = await this.createAuthHeader(
-        'PUT',
-        `/upload`,
-        hash,
-        signer
-      );
+      // Create Blossom auth event
+      const authHeader = await this.createAuthHeader('upload', hash, signer);
 
       // Upload the blob
       const response = await fetch(`${this.config.blossomUrl}/upload`, {
@@ -132,13 +127,8 @@ export class BlobStore {
    */
   async delete(hash: string, signer: StorageSignerInterface): Promise<void> {
     try {
-      // Create NIP-98 auth event
-      const authHeader = await this.createAuthHeader(
-        'DELETE',
-        `/${hash}`,
-        hash,
-        signer
-      );
+      // Create Blossom auth event
+      const authHeader = await this.createAuthHeader('delete', hash, signer);
 
       const response = await fetch(`${this.config.blossomUrl}/${hash}`, {
         method: 'DELETE',
@@ -167,38 +157,40 @@ export class BlobStore {
   }
 
   /**
-   * Create NIP-98 authorization header
+   * Create Blossom authorization header (BUD-02)
+   * Uses kind 24242 with t, expiration, and x tags
    */
   private async createAuthHeader(
-    method: string,
-    path: string,
-    payload: string,
+    action: string,
+    blobHash: string,
     signer: StorageSignerInterface
   ): Promise<string> {
     try {
       const pubkey = await signer.getPublicKey();
       const now = Math.floor(Date.now() / 1000);
+      const expiration = now + 300; // 5 minutes from now
 
-      // Create NIP-98 auth event
+      // Create Blossom auth event (BUD-02)
       const authEvent = {
-        kind: 27235, // NIP-98 HTTP Auth kind
-        content: '',
+        kind: 24242, // Blossom auth kind
+        content: `${action} ${blobHash}`,
         created_at: now,
         tags: [
-          ['u', `${this.config.blossomUrl}${path}`], // URL
-          ['method', method], // HTTP method
-          ['payload', payload], // Request payload hash
+          ['t', action], // Action: "upload", "delete", etc.
+          ['x', blobHash], // Blob hash
+          ['expiration', expiration.toString()], // Expiration timestamp
         ],
         pubkey,
       };
 
-      // Sign the event
-      const signature = await signer.signEvent(authEvent);
+      // Sign the event (returns id and sig)
+      const { id, sig } = await signer.signEvent(authEvent);
 
-      // Create the authorization header
+      // Create the authorization header with complete event
       const eventJson = JSON.stringify({
+        id,
         ...authEvent,
-        sig: signature,
+        sig,
       });
 
       return `Nostr ${btoa(eventJson)}`;

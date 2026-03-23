@@ -14,6 +14,7 @@ export type {
   EncryptedBlob,
   StorageConfig,
   StorageSignerInterface,
+  SignedEventResult,
 } from './types.js';
 
 export {
