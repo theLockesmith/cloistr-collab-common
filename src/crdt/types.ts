@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { SignerInterface } from '../auth/types.js';
 
 /**
  * Supported document types for collaboration
@@ -61,6 +62,8 @@ export interface SyncProvider {
  * Configuration for Nostr sync provider
  */
 export interface NostrSyncConfig {
+  /** Signer for signing Nostr events */
+  signer: SignerInterface;
   /** Relay URL to connect to */
   relayUrl: string;
   /** Document ID to sync */
@@ -71,6 +74,8 @@ export interface NostrSyncConfig {
   connectionTimeout?: number;
   /** Whether to persist updates to IndexedDB */
   persist?: boolean;
+  /** NIP-13 proof of work difficulty (number of leading zero bits required) */
+  powDifficulty?: number;
 }
 
 /**

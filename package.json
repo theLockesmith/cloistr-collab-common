@@ -24,6 +24,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "@types/libsodium-wrappers": "^0.7.14",
     "lib0": "^0.2.97",
     "libsodium-wrappers": "^0.8.2",

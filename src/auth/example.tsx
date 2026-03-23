@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Event, UnsignedEvent } from 'nostr-tools';
+import { UnsignedEvent } from 'nostr-tools';
 import {
   AuthProvider,
   useNostrAuth,

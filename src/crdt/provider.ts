@@ -1,5 +1,7 @@
 import * as Y from 'yjs';
-import { Event, finalizeEvent, UnsignedEvent, Relay } from 'nostr-tools';
+import { Event, UnsignedEvent, Relay } from 'nostr-tools';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { SyncProvider, NostrSyncConfig, NostrUpdateMessage } from './types.js';
 
 /**
@@ -15,6 +17,7 @@ export class NostrSyncProvider implements SyncProvider {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private messageBuffer: Uint8Array[] = [];
   private lastHeartbeat = 0;
+  private pubkey: string | null = null;
 
   // Event kind for collaborative updates (ephemeral)
   private static readonly UPDATE_KIND = 25078; // Ephemeral collab update
@@ -54,6 +57,10 @@ export class NostrSyncProvider implements SyncProvider {
       if (this.isConnected) {
         return;
       }
+
+      // Get pubkey from signer
+      this.pubkey = await this.config.signer.getPublicKey();
+      console.log(`[NostrSync] Authenticated as: ${this.pubkey.slice(0, 8)}...`);
 
       console.log(`[NostrSync] Connecting to relay: ${this.config.relayUrl}`);
 
@@ -268,21 +275,104 @@ export class NostrSyncProvider implements SyncProvider {
   }
 
   private async createEvent(kind: number, content: string, tags: string[][]): Promise<Event> {
-    // For demo purposes, using a dummy private key
-    // In production, this should integrate with the app's signing system
-    const privateKey = this.generateDummyPrivateKey();
+    if (!this.pubkey) {
+      throw new Error('Not authenticated - pubkey not available');
+    }
+
+    let eventTags = [...tags];
+    let created_at = Math.floor(Date.now() / 1000);
+
+    // Add NIP-13 PoW if required
+    if (this.config.powDifficulty && this.config.powDifficulty > 0) {
+      const result = await this.computePoW(
+        kind,
+        content,
+        eventTags,
+        this.config.powDifficulty,
+        created_at
+      );
+      eventTags.push(['nonce', result.nonce.toString(), result.difficulty.toString()]);
+      // Use the same created_at that was used for PoW computation
+      created_at = result.created_at;
+    }
 
     const unsignedEvent: UnsignedEvent = {
       kind,
-      created_at: Math.floor(Date.now() / 1000),
-      tags,
+      created_at,
+      tags: eventTags,
       content,
-      pubkey: this.getClientId(),
+      pubkey: this.pubkey,
     };
 
-    const signedEvent = finalizeEvent(unsignedEvent, privateKey);
+    return await this.config.signer.signEvent(unsignedEvent);
+  }
 
-    return signedEvent;
+  /**
+   * Compute NIP-13 proof of work
+   * Finds a nonce that results in event ID with required leading zero bits
+   */
+  private async computePoW(
+    kind: number,
+    content: string,
+    tags: string[][],
+    targetDifficulty: number,
+    created_at: number
+  ): Promise<{ nonce: number; difficulty: number; created_at: number }> {
+    let nonce = 0;
+    const maxIterations = 10_000_000; // Prevent infinite loop
+
+    while (nonce < maxIterations) {
+      const testTags = [...tags, ['nonce', nonce.toString(), targetDifficulty.toString()]];
+
+      // Compute event hash (ID) for this nonce
+      const eventForHash = [
+        0,
+        this.pubkey,
+        created_at,
+        kind,
+        testTags,
+        content,
+      ];
+      const serialized = JSON.stringify(eventForHash);
+      const hashBytes = sha256(new TextEncoder().encode(serialized));
+      const hashHex = bytesToHex(hashBytes);
+
+      // Count leading zero bits
+      const leadingZeroBits = this.countLeadingZeroBits(hashHex);
+
+      if (leadingZeroBits >= targetDifficulty) {
+        console.log(`[NostrSync] PoW found: nonce=${nonce}, difficulty=${leadingZeroBits}`);
+        return { nonce, difficulty: leadingZeroBits, created_at };
+      }
+
+      nonce++;
+      // Yield to event loop every 10000 iterations
+      if (nonce % 10000 === 0) {
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+
+    throw new Error(`Could not find PoW solution within ${maxIterations} iterations`);
+  }
+
+  /**
+   * Count leading zero bits in a hex string
+   */
+  private countLeadingZeroBits(hex: string): number {
+    let bits = 0;
+    for (const char of hex) {
+      const nibble = parseInt(char, 16);
+      if (nibble === 0) {
+        bits += 4;
+      } else {
+        // Count leading zeros in this nibble
+        if (nibble < 2) bits += 3;
+        else if (nibble < 4) bits += 2;
+        else if (nibble < 8) bits += 1;
+        break;
+      }
+    }
+    return bits;
   }
 
   private getEventTags(): string[][] {
@@ -300,28 +390,10 @@ export class NostrSyncProvider implements SyncProvider {
   }
 
   private getClientId(): string {
-    // In production, this should return the actual user's pubkey
-    // For now, generate a consistent ID based on the Yjs client ID
-    return `client_${this.doc.clientID.toString(16)}`;
-  }
-
-  private generateDummyPrivateKey(): Uint8Array {
-    // Generate a deterministic dummy private key for demo
-    // In production, integrate with proper key management
-    const seed = this.doc.clientID.toString();
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      const char = seed.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+    if (!this.pubkey) {
+      throw new Error('Not authenticated - pubkey not available');
     }
-
-    // Create a 32-byte Uint8Array
-    const keyBytes = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      keyBytes[i] = (hash >> (i * 8)) & 0xff;
-    }
-    return keyBytes;
+    return this.pubkey;
   }
 }
 
