@@ -36,8 +36,8 @@ export interface EncryptedBlob {
 export interface StorageConfig {
   /** Base URL of the Blossom server */
   blossomUrl: string;
-  /** Public key for authentication (hex format) */
-  authPubkey: string;
+  /** Public key for authentication (hex format) - optional if signer provided per-call */
+  authPubkey?: string;
 }
 
 /**

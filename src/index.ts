@@ -12,3 +12,6 @@ export * from './crdt/index.js';
 
 // Storage module - Blossom client with NIP-44 encryption
 export * from './storage/index.js';
+
+// Persistence module - Document snapshots via Blossom
+export * from './persistence/index.js';
