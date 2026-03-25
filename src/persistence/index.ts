@@ -14,6 +14,7 @@ export type {
   SnapshotMetadata,
   SaveResult,
   LoadResult,
+  DocumentType,
 } from './types.js';
 
 export {

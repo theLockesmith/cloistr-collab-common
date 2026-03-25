@@ -16,6 +16,7 @@ import {
   PersistenceError,
   SnapshotNotFoundError,
   BlobDownloadError,
+  DocumentType,
 } from './types.js';
 
 const SNAPSHOT_KIND = 30078; // NIP-78 application-specific data
@@ -34,6 +35,13 @@ export class DocumentPersistence {
   private isDirty = false;
   private pubkey: string | null = null;
 
+  /** Document title (user-editable) */
+  private _title: string;
+  /** Document type */
+  private _documentType: DocumentType;
+  /** Original creation timestamp */
+  private _createdAt: number;
+
   /** Called after successful save */
   public onSave?: (result: SaveResult) => void;
   /** Called after successful load */
@@ -46,6 +54,11 @@ export class DocumentPersistence {
     this.config = config;
     this.blobStore = new BlobStore({ blossomUrl: config.blossomUrl });
 
+    // Initialize metadata from config or derive from documentId
+    this._title = config.title || config.documentId;
+    this._documentType = config.documentType || this.inferDocumentType(config.documentId);
+    this._createdAt = config.createdAt || Date.now();
+
     // Track document changes
     this.doc.on('update', this.handleUpdate.bind(this));
 
@@ -53,6 +66,47 @@ export class DocumentPersistence {
     if (config.autoSaveInterval && config.autoSaveInterval > 0) {
       this.startAutoSave(config.autoSaveInterval);
     }
+  }
+
+  /**
+   * Infer document type from documentId prefix
+   */
+  private inferDocumentType(documentId: string): DocumentType {
+    if (documentId.startsWith('sheet-')) return 'sheet';
+    if (documentId.startsWith('whiteboard-')) return 'whiteboard';
+    if (documentId.startsWith('slides-')) return 'slides';
+    return 'doc';
+  }
+
+  /**
+   * Get document title
+   */
+  get title(): string {
+    return this._title;
+  }
+
+  /**
+   * Set document title
+   */
+  set title(value: string) {
+    if (value !== this._title) {
+      this._title = value;
+      this.isDirty = true;
+    }
+  }
+
+  /**
+   * Get document type
+   */
+  get documentType(): DocumentType {
+    return this._documentType;
+  }
+
+  /**
+   * Get creation timestamp
+   */
+  get createdAt(): number {
+    return this._createdAt;
   }
 
   /**
@@ -149,6 +203,17 @@ export class DocumentPersistence {
 
       this.lastSaveHash = metadata.hash;
       this.isDirty = false;
+
+      // Restore metadata from loaded snapshot
+      if (metadata.title) {
+        this._title = metadata.title;
+      }
+      if (metadata.type) {
+        this._documentType = metadata.type;
+      }
+      if (metadata.createdAt) {
+        this._createdAt = metadata.createdAt;
+      }
 
       const result: LoadResult = {
         found: true,
@@ -261,6 +326,9 @@ export class DocumentPersistence {
         timestamp: Date.now(),
         encrypted: false,
         appVersion: APP_VERSION,
+        title: this._title,
+        type: this._documentType,
+        createdAt: this._createdAt,
       };
 
       const unsignedEvent: UnsignedEvent = {
@@ -269,6 +337,7 @@ export class DocumentPersistence {
         tags: [
           ['d', this.config.documentId],
           ['t', 'yjs-snapshot'],
+          ['t', this._documentType], // Tag by document type for filtering
           ['client', 'cloistr-collab'],
         ],
         content: JSON.stringify(metadata),

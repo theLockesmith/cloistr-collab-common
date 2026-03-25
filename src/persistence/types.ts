@@ -4,6 +4,9 @@
 
 import type { SignerInterface } from '../auth/types.js';
 
+/** Document type for collaborative documents */
+export type DocumentType = 'doc' | 'sheet' | 'whiteboard' | 'slides';
+
 /**
  * Configuration for document persistence
  */
@@ -20,6 +23,12 @@ export interface PersistenceConfig {
   autoSaveInterval?: number;
   /** Encryption key for blob encryption (hex string, optional) */
   encryptionKey?: string;
+  /** Document title (user-editable, defaults to documentId) */
+  title?: string;
+  /** Document type (doc, sheet, whiteboard, slides) */
+  documentType?: DocumentType;
+  /** Original creation timestamp (preserved across saves) */
+  createdAt?: number;
 }
 
 /**
@@ -38,6 +47,12 @@ export interface SnapshotMetadata {
   encrypted: boolean;
   /** Application version that created the snapshot */
   appVersion: string;
+  /** Document title (user-editable) */
+  title?: string;
+  /** Document type (doc, sheet, whiteboard, slides) */
+  type?: DocumentType;
+  /** Original creation timestamp (preserved across saves) */
+  createdAt?: number;
 }
 
 /**
