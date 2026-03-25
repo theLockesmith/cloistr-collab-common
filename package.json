@@ -62,5 +62,8 @@
   "repository": {
     "type": "git",
     "url": "git@git.coldforge.xyz:coldforge/cloistr-collab-common.git"
+  },
+  "publishConfig": {
+    "@cloistr:registry": "https://git.coldforge.xyz/api/v4/projects/44/packages/npm/"
   }
 }
