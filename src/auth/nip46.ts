@@ -71,24 +71,34 @@ class Nip46Signer implements SignerInterface {
     this.clientSecretKey = generateSecretKey();
     this.clientPubkey = getPublicKeyFromPrivateKey(this.clientSecretKey);
     this.timeout = config.timeout || 30000; // 30 seconds default
-    this.relayUrls = config.relayUrls || DEFAULT_RELAY_URLS;
     this.pool = new SimplePool();
 
-    // Parse bunker URL to extract remote pubkey
-    this.remotePubkey = this.parseBunkerUrl(config.bunkerUrl);
+    // Parse bunker URL to extract remote pubkey and relays
+    const { pubkey, relays } = this.parseBunkerUrl(config.bunkerUrl);
+    this.remotePubkey = pubkey;
+
+    // Priority: config.relayUrls > bunker URL relays > default relays
+    this.relayUrls = config.relayUrls || (relays.length > 0 ? relays : DEFAULT_RELAY_URLS);
   }
 
   /**
-   * Parse bunker URL to extract remote signer's public key
+   * Parse bunker URL to extract remote signer's public key and relay URLs
    */
-  private parseBunkerUrl(bunkerUrl: string): string {
+  private parseBunkerUrl(bunkerUrl: string): { pubkey: string; relays: string[] } {
     // Format: bunker://<pubkey>?relay=<relay_url>&relay=<relay_url>
     try {
       const url = new URL(bunkerUrl);
       if (url.protocol !== 'bunker:') {
         throw new Error('Invalid bunker URL protocol');
       }
-      return url.hostname;
+
+      // Extract relay URLs from query parameters
+      const relays = url.searchParams.getAll('relay');
+
+      return {
+        pubkey: url.hostname,
+        relays,
+      };
     } catch (error) {
       throw new Nip46Error(
         `Invalid bunker URL format: ${error instanceof Error ? error.message : 'Unknown error'}`,
