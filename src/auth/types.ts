@@ -64,6 +64,12 @@ export interface SignerInterface {
    * Disconnect the signer (cleanup)
    */
   disconnect?(): Promise<void>;
+
+  /**
+   * Get the client secret key for session persistence (NIP-46 only)
+   * @returns Client secret key in hex format, or undefined for NIP-07
+   */
+  getClientSecretKey?(): string;
 }
 
 /**
@@ -76,6 +82,8 @@ export interface Nip46Config {
   relayUrls?: string[];
   /** Timeout for connection attempts (ms) */
   timeout?: number;
+  /** Optional client secret key (hex) for session persistence */
+  clientSecretKey?: string;
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   SimplePool,
   nip04,
 } from 'nostr-tools';
+import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { SignerInterface, Nip46Config, Nip46Error } from './types.js';
 
 /**
@@ -45,12 +46,10 @@ interface Nip46Response {
 
 /**
  * Default relay URLs for NIP-46 communication
+ * IMPORTANT: relay.cloistr.xyz MUST be first - it's rate-limit exempt for kind:24133
  */
 const DEFAULT_RELAY_URLS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.snort.social',
-  'wss://relay.nostr.band',
+  'wss://relay.cloistr.xyz',
 ];
 
 /**
@@ -68,7 +67,12 @@ class Nip46Signer implements SignerInterface {
   private cachedRemotePubkey: string | null = null;
 
   constructor(config: Nip46Config) {
-    this.clientSecretKey = generateSecretKey();
+    // Use provided client secret key for session persistence, or generate new
+    if (config.clientSecretKey) {
+      this.clientSecretKey = hexToBytes(config.clientSecretKey);
+    } else {
+      this.clientSecretKey = generateSecretKey();
+    }
     this.clientPubkey = getPublicKeyFromPrivateKey(this.clientSecretKey);
     this.timeout = config.timeout || 30000; // 30 seconds default
     this.pool = new SimplePool();
@@ -78,7 +82,11 @@ class Nip46Signer implements SignerInterface {
     this.remotePubkey = pubkey;
 
     // Priority: config.relayUrls > bunker URL relays > default relays
-    this.relayUrls = config.relayUrls || (relays.length > 0 ? relays : DEFAULT_RELAY_URLS);
+    // ALWAYS ensure relay.cloistr.xyz is included (rate-limit exempt for NIP-46)
+    const baseRelays = config.relayUrls || (relays.length > 0 ? relays : DEFAULT_RELAY_URLS);
+    this.relayUrls = baseRelays.includes('wss://relay.cloistr.xyz')
+      ? baseRelays
+      : ['wss://relay.cloistr.xyz', ...baseRelays];
 
     // Debug logging (use warn to bypass console filters)
     console.warn('[NIP-46] Bunker URL:', config.bunkerUrl);
@@ -189,7 +197,7 @@ class Nip46Signer implements SignerInterface {
       // Set timeout
       setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject(new Nip46Error('Request timed out', 'TIMEOUT'));
+        reject(new Nip46Error(`Request timed out (relays: ${this.relayUrls.join(', ')})`, 'TIMEOUT'));
       }, this.timeout);
     });
   }
@@ -255,7 +263,10 @@ class Nip46Signer implements SignerInterface {
     }
 
     try {
-      return await this.sendRequest('sign_event', [event]);
+      // NIP-46 spec requires event as JSON string
+      const result = await this.sendRequest('sign_event', [JSON.stringify(event)]);
+      // Response is also JSON string
+      return typeof result === 'string' ? JSON.parse(result) : result;
     } catch (error) {
       throw new Nip46Error(
         `Failed to sign event: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -298,6 +309,15 @@ class Nip46Signer implements SignerInterface {
         'DECRYPT_FAILED'
       );
     }
+  }
+
+  /**
+   * Get the client secret key as hex for session persistence
+   * Store this value securely and pass it back via config.clientSecretKey
+   * to maintain the same client identity across page reloads
+   */
+  getClientSecretKey(): string {
+    return bytesToHex(this.clientSecretKey);
   }
 
   /**
