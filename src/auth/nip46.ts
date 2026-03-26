@@ -79,6 +79,11 @@ class Nip46Signer implements SignerInterface {
 
     // Priority: config.relayUrls > bunker URL relays > default relays
     this.relayUrls = config.relayUrls || (relays.length > 0 ? relays : DEFAULT_RELAY_URLS);
+
+    // Debug logging (use warn to bypass console filters)
+    console.warn('[NIP-46] Bunker URL:', config.bunkerUrl);
+    console.warn('[NIP-46] Parsed relays from URL:', relays);
+    console.warn('[NIP-46] Using relays:', this.relayUrls);
   }
 
   /**
