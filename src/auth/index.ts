@@ -90,10 +90,17 @@
 export type {
   AuthState,
   SignerInterface,
+  EnhancedSignerInterface,
   AuthMethod,
   AuthContextValue,
   Nip46Config,
   ExtensionDetection,
+  // Relay health types
+  RelayHealth,
+  RelayConfig,
+  // Session types
+  Nip46Session,
+  SessionPersistence,
 } from './types.js';
 
 // Error exports
@@ -115,6 +122,14 @@ export {
   connectNip46,
   isNip46Supported,
   isValidBunkerUrl,
+  // Session helpers
+  restoreNip46Session,
+  hasNip46Session,
+  clearNip46Session,
+  // Re-exported from nip46.ts
+  RelayHealthManager,
+  DEFAULT_RELAY_CONFIG,
+  SessionManager,
 } from './nip46.js';
 
 // React context exports

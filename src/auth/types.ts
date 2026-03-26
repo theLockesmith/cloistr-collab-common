@@ -84,6 +84,12 @@ export interface Nip46Config {
   timeout?: number;
   /** Optional client secret key (hex) for session persistence */
   clientSecretKey?: string;
+  /** Optional circuit breaker/rate limiting configuration */
+  relayConfig?: Partial<RelayConfig>;
+  /** Enable batch_sign extension (default: true) */
+  enableBatchSign?: boolean;
+  /** Session storage key (default: 'cloistr_nip46_session') */
+  sessionStorageKey?: string;
 }
 
 /**
@@ -146,4 +152,121 @@ export interface ExtensionDetection {
   name?: string;
   /** Extension version if available */
   version?: string;
+}
+
+// ============================================================
+// Relay Health & Circuit Breaker Types
+// ============================================================
+
+/**
+ * Per-relay health tracking for circuit breaker pattern
+ */
+export interface RelayHealth {
+  /** Consecutive failure count */
+  failures: number;
+  /** Timestamp of last failure */
+  lastFailure: number;
+  /** Whether circuit breaker has disabled this relay */
+  disabled: boolean;
+  /** Current throttle delay in ms */
+  throttleMs: number;
+  /** Timestamp of last request sent */
+  lastRequest: number;
+  /** Whether relay is currently rate-limited */
+  rateLimited: boolean;
+  /** Reason for last failure */
+  lastReason?: string;
+}
+
+/**
+ * Circuit breaker and rate limiting configuration
+ */
+export interface RelayConfig {
+  /** Circuit opens after N consecutive failures (default: 5) */
+  MAX_FAILURES: number;
+  /** Cooldown before retry after circuit opens (default: 60000ms) */
+  COOLDOWN_MS: number;
+  /** Minimum throttle delay (default: 0ms) */
+  MIN_THROTTLE_MS: number;
+  /** Maximum throttle delay (default: 2000ms) */
+  MAX_THROTTLE_MS: number;
+  /** Throttle increase per rate-limit hit (default: 250ms) */
+  THROTTLE_INCREASE: number;
+  /** Throttle decrease per success (default: 100ms) */
+  THROTTLE_DECREASE: number;
+  /** Per-relay connection timeout (default: 10000ms) */
+  CONNECT_TIMEOUT_MS: number;
+  /** Base timeout for NIP-46 requests (default: 30000ms) */
+  BASE_TIMEOUT_MS: number;
+  /** Multiplier for throttle in timeout calculation (default: 3) */
+  THROTTLE_TIMEOUT_BUFFER: number;
+}
+
+// ============================================================
+// Session Persistence Types
+// ============================================================
+
+/**
+ * Persisted NIP-46 session data
+ */
+export interface Nip46Session {
+  /** User's public key (hex) */
+  userPubkey: string;
+  /** Remote signer's public key (hex) */
+  remotePubkey: string;
+  /** Relay URLs used for communication */
+  relayUrls: string[];
+  /** Client secret key (hex) for session continuity */
+  clientSecretKey: string;
+  /** Bunker URL for reconnection */
+  bunkerUrl: string;
+  /** Session creation timestamp */
+  timestamp: number;
+}
+
+/**
+ * Session persistence interface
+ */
+export interface SessionPersistence {
+  /** Check if a saved session exists */
+  hasSavedSession(): boolean;
+  /** Save current session */
+  saveSession(session: Nip46Session): void;
+  /** Load saved session */
+  loadSession(): Nip46Session | null;
+  /** Clear saved session */
+  clearSession(): void;
+}
+
+// ============================================================
+// Enhanced Signer Interface
+// ============================================================
+
+/**
+ * Extended signer interface with batch signing and session persistence
+ */
+export interface EnhancedSignerInterface extends SignerInterface {
+  /**
+   * Sign multiple events in a batch (cloistr-signer extension)
+   * Falls back to individual signing if not supported
+   * @param events - Array of unsigned events
+   * @returns Promise resolving to array of signed events
+   */
+  batchSignEvents?(events: UnsignedEvent[]): Promise<Event[]>;
+
+  /**
+   * Check if a saved session exists
+   */
+  hasSavedSession?(): boolean;
+
+  /**
+   * Restore a previously saved session
+   * @returns Promise resolving to user pubkey if restored, null otherwise
+   */
+  restoreSession?(): Promise<string | null>;
+
+  /**
+   * Get relay URLs used for NIP-46 communication
+   */
+  getRelayUrls?(): string[];
 }

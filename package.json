@@ -1,12 +1,13 @@
 {
   "name": "@cloistr/collab-common",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "description": "Shared collaboration infrastructure for Cloistr apps",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "dist/umd"
   ],
   "exports": {
     ".": {
@@ -48,10 +49,16 @@
     "./persistence": {
       "types": "./dist/persistence/index.d.ts",
       "import": "./dist/persistence/index.js"
+    },
+    "./auth/umd": {
+      "import": "./dist/umd/cloistr-auth.es.js",
+      "require": "./dist/umd/cloistr-auth.umd.js"
     }
   },
   "scripts": {
     "build": "tsc",
+    "build:umd": "vite build",
+    "build:all": "tsc && vite build",
     "dev": "tsc --watch",
     "test": "vitest",
     "lint": "eslint src --ext ts,tsx",
@@ -77,6 +84,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "typescript": "^5.6.0",
+    "vite": "^6.0.0",
     "vitest": "^2.1.0"
   },
   "peerDependencies": {
