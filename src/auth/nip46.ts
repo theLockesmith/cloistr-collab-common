@@ -124,13 +124,14 @@ class Nip46Signer implements SignerInterface {
         authors: [this.remotePubkey],
       };
 
-      this.pool.subscribeMany(
-        this.relayUrls,
-        [filter] as any, // TODO: Fix nostr-tools Filter type for tag filters
-        {
-          onevent: (event: Event) => this.handleResponse(event),
-        }
-      );
+      // Use subscribe with filters array - subscribeMany double-wraps
+      for (const url of this.relayUrls) {
+        this.pool.ensureRelay(url).then(relay => {
+          relay.subscribe([filter], {
+            onevent: (event: Event) => this.handleResponse(event),
+          });
+        });
+      }
 
       // Send connect request
       await this.sendRequest('connect', [this.clientPubkey, '']);
