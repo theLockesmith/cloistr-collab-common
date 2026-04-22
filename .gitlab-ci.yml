@@ -28,8 +28,8 @@ publish:
   dependencies:
     - build
   script:
-    - echo "@cloistr:registry=https://git.coldforge.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-    - echo "//git.coldforge.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - echo "@cloistr:registry=https://git.aegis-hq.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//git.aegis-hq.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
     - npm publish
   only:
     - master
