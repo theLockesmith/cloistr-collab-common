@@ -1,14 +1,51 @@
 /**
- * @fileoverview Cloistr versioning module - Document versioning and history
- * @todo This module is planned for future implementation
+ * @fileoverview Versioning module - Document versioning, undo/redo, and snapshots
+ * Provides version history, undo/redo functionality, and snapshot management
  */
 
-// Placeholder exports to prevent build errors
-export interface VersionInfo {
-  version: number;
-  timestamp: number;
-}
+// Export types
+export type {
+  VersionInfo,
+  VersionHistory,
+  Snapshot,
+  UndoState,
+  UndoConfig,
+  SnapshotConfig,
+  SaveSnapshotOptions,
+  VersionDiff,
+  VersioningContextValue,
+} from './types.js';
 
-export interface VersionHistory {
-  versions: VersionInfo[];
-}
+export { VersioningError } from './types.js';
+
+// Export snapshot utilities
+export {
+  SnapshotManager,
+  generateVersionId,
+  hashSnapshot,
+  encodeDocState,
+  createFullSnapshot,
+  applySnapshot,
+  snapshotsEqual,
+  getDocumentSize,
+} from './snapshot.js';
+
+// Export undo utilities
+export {
+  EnhancedUndoManager,
+  createUndoManager,
+  getUndoState,
+  performUndo,
+  performRedo,
+  clearUndoHistory,
+  stopTracking,
+  resumeTracking,
+} from './undo.js';
+
+// Export hooks
+export {
+  useUndo,
+  useSnapshots,
+  useVersioning,
+  useVersioningKeyboard,
+} from './hooks.js';

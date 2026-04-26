@@ -1,13 +1,38 @@
 /**
- * @fileoverview Cloistr relay module - Nostr relay management and connectivity
- * @todo This module is planned for future implementation
+ * @fileoverview Relay module - Nostr relay pool management
+ * Provides multi-relay connectivity with health tracking, circuit breaker,
+ * and React integration for Cloistr collaboration apps.
  */
 
-// Placeholder exports to prevent build errors
-export interface RelayConfig {
-  url: string;
-}
+// Export types
+export type {
+  RelayStatus,
+  RelayState,
+  RelayPoolConfig,
+  SubscriptionHandle,
+  SubscribeOptions,
+  PublishOptions,
+  PublishResult,
+  RelayPoolCallbacks,
+  RelayPoolState,
+  RelayPoolContextValue,
+} from './types.js';
 
-export interface RelayStatus {
-  connected: boolean;
-}
+// Export relay pool
+export { RelayPool, createRelayPool } from './pool.js';
+
+// Export React context and provider
+export { NostrProvider, useRelayPool, useRelayPoolOptional } from './context.js';
+export type { NostrProviderProps } from './context.js';
+
+// Export hooks
+export {
+  useSubscription,
+  usePublish,
+  useRelayStatus,
+  useRelayState,
+  useEvent,
+  useAuthorEvents,
+  useEventStream,
+  useRelayList,
+} from './hooks.js';

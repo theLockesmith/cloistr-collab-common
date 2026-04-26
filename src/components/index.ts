@@ -1,13 +1,19 @@
 /**
- * @fileoverview Cloistr components module - Shared React components
- * @todo This module is planned for future implementation
+ * @fileoverview Shared React components for Cloistr collaboration apps
+ * Provides Toolbar, ShareDialog, and status indicators
  */
 
-// Placeholder exports to prevent build errors
-export interface ComponentProps {
-  children?: React.ReactNode;
-}
+// Export types
+export type {
+  BaseComponentProps,
+  ToolbarProps,
+  ShareDialogProps,
+  VersionHistoryProps,
+  ConnectionStatusProps,
+  SaveStatusProps,
+} from './types.js';
 
-export interface ButtonProps extends ComponentProps {
-  onClick?: () => void;
-}
+// Export components
+export { Toolbar } from './Toolbar.js';
+export { ShareDialog } from './ShareDialog.js';
+export { ConnectionStatus, SaveStatus, VersionHistory } from './StatusIndicators.js';
