@@ -68,6 +68,9 @@ export {
   useVersioningKeyboard,
 } from './versioning/index.js';
 
+// Config module - Document IDs and service URLs
+export * from './config/index.js';
+
 // Components module - Shared React UI components
 // Use subpath import: import { ... } from '@cloistr/collab-common/components'
 export {

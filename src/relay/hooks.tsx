@@ -276,3 +276,85 @@ export function useRelayList(): {
     reconnectAll,
   };
 }
+
+/**
+ * Hook for fetching user relay preferences
+ * Queries discovery service, then falls back to direct relay queries
+ */
+export function useRelayPrefsHook(
+  pubkey: string | undefined,
+  config?: {
+    discoveryUrl?: string;
+    defaultRelay?: string;
+    cacheTtl?: number;
+    queryTimeout?: number;
+  }
+): {
+  prefs: import('./relay-prefs.js').RelayPrefs | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+} {
+  const { subscribe, state } = useRelayPool();
+  const [prefs, setPrefs] = useState<import('./relay-prefs.js').RelayPrefs | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [fetchCount, setFetchCount] = useState(0);
+
+  const refetch = useCallback(() => {
+    setFetchCount((c) => c + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!pubkey) {
+      setPrefs(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    // Dynamically import to avoid circular dependencies
+    import('./relay-prefs.js').then(({ getRelayPrefs, invalidateCache }) => {
+      if (cancelled) return;
+
+      // Invalidate cache on refetch
+      if (fetchCount > 0) {
+        invalidateCache(pubkey);
+      }
+
+      // Create a relay pool adapter for direct queries
+      const poolAdapter = state.isConnected
+        ? {
+            subscribe: (
+              filters: Filter[],
+              onEvent: (event: Event) => void,
+              options?: { oneose?: () => void }
+            ) => subscribe(filters, onEvent, options),
+          }
+        : undefined;
+
+      getRelayPrefs(pubkey, config, poolAdapter)
+        .then((result) => {
+          if (!cancelled) {
+            setPrefs(result);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setError(err);
+            setLoading(false);
+          }
+        });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pubkey, state.isConnected, fetchCount, JSON.stringify(config)]);
+
+  return { prefs, loading, error, refetch };
+}

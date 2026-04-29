@@ -50,6 +50,10 @@
       "types": "./dist/persistence/index.d.ts",
       "import": "./dist/persistence/index.js"
     },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
     "./auth/umd": {
       "import": "./dist/umd/cloistr-auth.es.js",
       "require": "./dist/umd/cloistr-auth.umd.js"

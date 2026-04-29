@@ -35,4 +35,20 @@ export {
   useAuthorEvents,
   useEventStream,
   useRelayList,
+  useRelayPrefsHook,
 } from './hooks.js';
+
+// Export relay preferences
+export {
+  getRelayPrefs,
+  invalidateCache,
+  createRelayPrefsEvent,
+  RELAY_PREFS_KIND,
+  RELAY_PREFS_D_TAG,
+  NIP65_KIND,
+} from './relay-prefs.js';
+export type {
+  RelayPref,
+  RelayPrefs,
+  RelayPrefsConfig,
+} from './relay-prefs.js';
