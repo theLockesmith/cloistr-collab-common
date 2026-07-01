@@ -6,7 +6,8 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, ReactNode, useState } from 'react';
 import { AuthState, AuthContextValue, SignerInterface, Nip46Config } from './types.js';
 import { connectNip07, isNip07Supported } from './nip07.js';
-import { connectNip46, isNip46Supported } from './nip46.js';
+import { connectNip46, isNip46Supported, startNostrConnect } from './nip46.js';
+import type { NostrConnectParams, NostrConnectSession } from './nip46.js';
 
 /**
  * Initial authentication state
@@ -191,20 +192,62 @@ export function AuthProvider({
   }, [saveToStorage]);
 
   /**
+   * Connect using a client-initiated nostrconnect:// login. The signer's
+   * connect-response is NIP-44 encrypted, so this depends on the NIP-44-capable
+   * decrypt path in the NIP-46 client.
+   */
+  const connectViaNostrConnectHandler = useCallback(
+    async (
+      params?: NostrConnectParams,
+      onUri?: (uri: string, session: NostrConnectSession) => void
+    ) => {
+      if (!isNip46Supported()) {
+        dispatch({ type: 'ERROR', error: 'NIP-46 is not supported in this environment' });
+        return;
+      }
+
+      dispatch({ type: 'CONNECTING', method: 'nip46' });
+
+      try {
+        const session = startNostrConnect(params);
+        // Hand the URI to the caller so it can present it / open the signer for
+        // approval while we wait.
+        onUri?.(session.uri, session);
+
+        const newSigner = await session.approved;
+        const pubkey = await newSigner.getPublicKey();
+
+        setSigner(newSigner);
+        dispatch({ type: 'CONNECTED', pubkey, method: 'nip46' });
+        saveToStorage('nip46', pubkey);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to connect via nostrconnect';
+        dispatch({ type: 'ERROR', error: errorMessage });
+        setSigner(null);
+      }
+    },
+    [saveToStorage]
+  );
+
+  /**
    * Disconnect current signer
    */
   const disconnectHandler = useCallback(async () => {
-    if (signer && signer.disconnect) {
-      try {
-        await signer.disconnect();
-      } catch (error) {
-        console.warn('Error during signer disconnect:', error);
-      }
-    }
-
+    // Clear local session state FIRST so the UI logs out immediately. The remote
+    // NIP-46 disconnect is a relay round-trip that can hang for the full request
+    // timeout (~30s); logout must never block on it.
+    const current = signer;
     setSigner(null);
     dispatch({ type: 'DISCONNECTED' });
     clearStorage();
+
+    if (current && current.disconnect) {
+      // Best-effort, fire-and-forget — we've already logged the user out locally.
+      Promise.resolve()
+        .then(() => current.disconnect!())
+        .catch((error) => console.warn('Error during signer disconnect:', error));
+    }
   }, [signer, clearStorage]);
 
   /**
@@ -251,6 +294,7 @@ export function AuthProvider({
     authState,
     connectNip07: connectNip07Handler,
     connectNip46: connectNip46Handler,
+    connectViaNostrConnect: connectViaNostrConnectHandler,
     disconnect: disconnectHandler,
     signer,
   };

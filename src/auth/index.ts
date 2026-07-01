@@ -122,6 +122,8 @@ export {
   connectNip46,
   isNip46Supported,
   isValidBunkerUrl,
+  // nostrconnect:// (client-initiated login)
+  startNostrConnect,
   // Session helpers
   restoreNip46Session,
   hasNip46Session,
@@ -131,6 +133,8 @@ export {
   DEFAULT_RELAY_CONFIG,
   SessionManager,
 } from './nip46.js';
+
+export type { NostrConnectParams, NostrConnectSession } from './nip46.js';
 
 // React context exports
 export {

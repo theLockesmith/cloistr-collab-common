@@ -4,6 +4,7 @@
  */
 
 import { Event, UnsignedEvent } from 'nostr-tools';
+import type { NostrConnectParams, NostrConnectSession } from './nip46.js';
 
 /**
  * Authentication methods supported by Cloistr
@@ -102,6 +103,15 @@ export interface AuthContextValue {
   connectNip07(): Promise<void>;
   /** Connect using NIP-46 remote signer */
   connectNip46(config: Nip46Config): Promise<void>;
+  /**
+   * Begin a client-initiated nostrconnect:// login. `onUri` is invoked with the
+   * URI (and session) to present to the user or hand to the signer for approval,
+   * before the returned promise resolves on approval.
+   */
+  connectViaNostrConnect(
+    params?: NostrConnectParams,
+    onUri?: (uri: string, session: NostrConnectSession) => void
+  ): Promise<void>;
   /** Disconnect current signer */
   disconnect(): Promise<void>;
   /** Current signer interface (null if not connected) */
