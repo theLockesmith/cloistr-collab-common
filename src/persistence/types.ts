@@ -2,7 +2,7 @@
  * Types for document persistence
  */
 
-import type { SignerInterface } from '../auth/types.js';
+import type { SignerInterface } from '@cloistr/auth';
 
 /** Document type for collaborative documents */
 export type DocumentType = 'doc' | 'sheet' | 'whiteboard' | 'slides';

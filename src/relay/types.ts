@@ -4,7 +4,7 @@
  */
 
 import { Relay, Event, Filter } from 'nostr-tools';
-import { RelayConfig, RelayHealth } from '../auth/types.js';
+import { RelayConfig, RelayHealth } from '@cloistr/auth';
 
 /**
  * Relay connection status

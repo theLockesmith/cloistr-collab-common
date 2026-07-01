@@ -24,7 +24,7 @@ import {
   createEmptyShareMetadata,
   incrementViewCount,
 } from './utils.js';
-import type { SignerInterface } from '../auth/types.js';
+import type { SignerInterface } from '@cloistr/auth';
 
 /**
  * Hook for managing document sharing and permissions

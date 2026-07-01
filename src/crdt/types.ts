@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { SignerInterface } from '../auth/types.js';
+import { SignerInterface } from '@cloistr/auth';
 
 /**
  * Supported document types for collaboration

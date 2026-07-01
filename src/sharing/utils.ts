@@ -15,7 +15,7 @@ import {
   PermissionCheckResult,
   ShareMetadata,
 } from './types.js';
-import type { SignerInterface } from '../auth/types.js';
+import type { SignerInterface } from '@cloistr/auth';
 
 /**
  * Generate a unique share ID
