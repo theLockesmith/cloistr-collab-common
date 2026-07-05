@@ -44,8 +44,8 @@ export function ConnectionStatus({
     gap: '6px',
     padding: '4px 10px',
     borderRadius: '16px',
-    backgroundColor: isConnected ? '#dcfce7' : '#fef2f2',
-    color: isConnected ? '#166534' : '#991b1b',
+    backgroundColor: isConnected ? 'color-mix(in srgb, var(--cloistr-success) 15%, transparent)' : 'color-mix(in srgb, var(--cloistr-error) 10%, transparent)',
+    color: isConnected ? 'color-mix(in srgb, var(--cloistr-success) 80%, var(--cloistr-text))' : 'color-mix(in srgb, var(--cloistr-error) 80%, var(--cloistr-text))',
     fontSize: '12px',
     fontWeight: 500,
     cursor: onClick ? 'pointer' : 'default',
@@ -56,7 +56,7 @@ export function ConnectionStatus({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: isConnected ? '#22c55e' : '#ef4444',
+    backgroundColor: isConnected ? 'var(--cloistr-success)' : 'var(--cloistr-error)',
   };
 
   return (
@@ -99,7 +99,7 @@ export function SaveStatus({
     alignItems: 'center',
     gap: '6px',
     fontSize: '12px',
-    color: '#6b7280',
+    color: 'var(--cloistr-text-muted)',
     ...style,
   };
 
@@ -107,7 +107,7 @@ export function SaveStatus({
     width: '6px',
     height: '6px',
     borderRadius: '50%',
-    backgroundColor: isSaving ? '#3b82f6' : hasUnsavedChanges ? '#f59e0b' : '#22c55e',
+    backgroundColor: isSaving ? 'var(--cloistr-info)' : hasUnsavedChanges ? 'var(--cloistr-warning)' : 'var(--cloistr-success)',
   };
 
   return (
@@ -117,14 +117,14 @@ export function SaveStatus({
         <span>Saving...</span>
       ) : hasUnsavedChanges ? (
         <>
-          <span style={{ color: '#f59e0b' }}>Unsaved changes</span>
+          <span style={{ color: 'var(--cloistr-warning)' }}>Unsaved changes</span>
           {onSave && (
             <button
               onClick={onSave}
               style={{
                 border: 'none',
                 background: 'none',
-                color: '#3b82f6',
+                color: 'var(--cloistr-primary)',
                 cursor: 'pointer',
                 fontSize: '12px',
                 textDecoration: 'underline',
@@ -172,9 +172,9 @@ export function VersionHistory({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 12px',
-    backgroundColor: isActive ? '#eff6ff' : '#f9fafb',
+    backgroundColor: isActive ? 'var(--cloistr-bg-hover)' : 'var(--cloistr-bg-elevated)',
     borderRadius: '6px',
-    border: isActive ? '1px solid #3b82f6' : '1px solid transparent',
+    border: isActive ? '1px solid var(--cloistr-primary)' : '1px solid transparent',
     cursor: 'pointer',
   });
 
@@ -182,15 +182,15 @@ export function VersionHistory({
     padding: '4px 10px',
     border: 'none',
     borderRadius: '4px',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
+    backgroundColor: 'var(--cloistr-primary)',
+    color: 'white',
     fontSize: '12px',
     cursor: 'pointer',
   };
 
   if (versions.length === 0) {
     return (
-      <div style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>
+      <div style={{ textAlign: 'center', color: 'var(--cloistr-text-muted)', padding: '20px' }}>
         No versions yet
       </div>
     );
@@ -207,12 +207,12 @@ export function VersionHistory({
               <div style={{ fontWeight: 500, fontSize: '14px' }}>
                 {showLabels && version.label ? version.label : `Version ${version.version}`}
               </div>
-              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+              <div style={{ fontSize: '12px', color: 'var(--cloistr-text-muted)' }}>
                 {formatRelativeTime(version.timestamp)}
                 {showAuthor && ` by ${version.authorPubkey.slice(0, 8)}...`}
               </div>
               {version.description && (
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--cloistr-text-dim)', marginTop: '4px' }}>
                   {version.description}
                 </div>
               )}
@@ -227,7 +227,7 @@ export function VersionHistory({
               </button>
             )}
             {isActive && (
-              <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 500 }}>
+              <span style={{ fontSize: '12px', color: 'var(--cloistr-primary)', fontWeight: 500 }}>
                 Current
               </span>
             )}

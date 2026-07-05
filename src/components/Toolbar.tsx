@@ -82,16 +82,16 @@ export function Toolbar({
     alignItems: 'center',
     gap: compact ? '8px' : '16px',
     padding: compact ? '8px 12px' : '12px 16px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    backgroundColor: 'var(--cloistr-bg)',
+    borderBottom: '1px solid var(--cloistr-border)',
     ...style,
   };
 
   const buttonStyle: React.CSSProperties = {
     padding: compact ? '4px 8px' : '6px 12px',
-    border: '1px solid #d1d5db',
+    border: '1px solid var(--cloistr-border)',
     borderRadius: '6px',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--cloistr-bg)',
     cursor: 'pointer',
     fontSize: compact ? '12px' : '14px',
     display: 'flex',
@@ -121,7 +121,7 @@ export function Toolbar({
               style={{
                 fontSize: compact ? '14px' : '18px',
                 fontWeight: 600,
-                border: '1px solid #3b82f6',
+                border: '1px solid var(--cloistr-primary)',
                 borderRadius: '4px',
                 padding: '4px 8px',
                 outline: 'none',
@@ -150,11 +150,11 @@ export function Toolbar({
 
           {/* Save status */}
           {!compact && (
-            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+            <span style={{ fontSize: '12px', color: 'var(--cloistr-text-muted)' }}>
               {isSaving ? (
                 'Saving...'
               ) : hasUnsavedChanges ? (
-                <span style={{ color: '#f59e0b' }}>Unsaved changes</span>
+                <span style={{ color: 'var(--cloistr-warning)' }}>Unsaved changes</span>
               ) : lastSavedAt ? (
                 `Saved ${formatRelativeTime(lastSavedAt)}`
               ) : null}
@@ -171,8 +171,8 @@ export function Toolbar({
           gap: '4px',
           padding: '4px 8px',
           borderRadius: '4px',
-          backgroundColor: isConnected ? '#dcfce7' : '#fef2f2',
-          color: isConnected ? '#166534' : '#991b1b',
+          backgroundColor: isConnected ? 'color-mix(in srgb, var(--cloistr-success) 15%, transparent)' : 'color-mix(in srgb, var(--cloistr-error) 10%, transparent)',
+          color: isConnected ? 'color-mix(in srgb, var(--cloistr-success) 80%, var(--cloistr-text))' : 'color-mix(in srgb, var(--cloistr-error) 80%, var(--cloistr-text))',
           fontSize: '12px',
         }}
         title={isConnected ? `Connected (${peerCount} peer${peerCount !== 1 ? 's' : ''})` : 'Disconnected'}
@@ -182,7 +182,7 @@ export function Toolbar({
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: isConnected ? '#22c55e' : '#ef4444',
+            backgroundColor: isConnected ? 'var(--cloistr-success)' : 'var(--cloistr-error)',
           }}
         />
         {!compact && (
@@ -239,8 +239,8 @@ export function Toolbar({
           onClick={onShare}
           style={{
             ...buttonStyle,
-            backgroundColor: '#3b82f6',
-            color: '#ffffff',
+            backgroundColor: 'var(--cloistr-primary)',
+            color: 'white',
             border: 'none',
           }}
           title="Share"

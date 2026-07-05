@@ -82,7 +82,7 @@ export function UserAvatars({
         <div
           style={{
             ...avatarStyle,
-            backgroundColor: '#666',
+            backgroundColor: 'var(--cloistr-text-dim)',
             zIndex: 0,
           }}
           title={`+${remainingCount} more users`}
@@ -212,8 +212,8 @@ export function PresenceIndicator({
     width: size,
     height: size,
     borderRadius: '50%',
-    backgroundColor: isOnline ? '#22c55e' : '#6b7280',
-    border: '2px solid white',
+    backgroundColor: isOnline ? 'var(--cloistr-success)' : 'var(--cloistr-text-dim)',
+    border: '2px solid var(--cloistr-bg)',
     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
   };
 
@@ -233,7 +233,7 @@ export function PresenceIndicator({
       <span
         style={{
           fontSize: '14px',
-          color: isOnline ? '#374151' : '#6b7280',
+          color: isOnline ? 'var(--cloistr-text)' : 'var(--cloistr-text-muted)',
           fontWeight: isOnline ? '500' : 'normal',
         }}
       >
@@ -303,7 +303,7 @@ export function CollaboratorList({
 
   return (
     <div className={className}>
-      <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#6b7280' }}>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--cloistr-text-muted)' }}>
         Collaborators ({users.length})
       </h3>
 
@@ -321,9 +321,9 @@ export function CollaboratorList({
                 gap: '8px',
                 padding: '6px 8px',
                 borderRadius: '6px',
-                backgroundColor: isLocal ? '#f3f4f6' : 'transparent',
+                backgroundColor: isLocal ? 'var(--cloistr-bg-elevated)' : 'transparent',
                 cursor: onUserClick ? 'pointer' : 'default',
-                border: isLocal ? '1px solid #d1d5db' : '1px solid transparent',
+                border: isLocal ? '1px solid var(--cloistr-border)' : '1px solid transparent',
               }}
               onClick={() => onUserClick?.(user)}
             >
@@ -350,7 +350,7 @@ export function CollaboratorList({
                 style={{
                   flex: 1,
                   fontSize: '14px',
-                  color: '#374151',
+                  color: 'var(--cloistr-text)',
                   fontWeight: isLocal ? '600' : 'normal',
                 }}
               >

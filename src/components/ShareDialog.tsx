@@ -136,7 +136,7 @@ export function ShareDialog({
   };
 
   const dialogStyle: React.CSSProperties = {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--cloistr-bg)',
     borderRadius: '12px',
     width: '480px',
     maxWidth: '90vw',
@@ -148,14 +148,14 @@ export function ShareDialog({
 
   const headerStyle: React.CSSProperties = {
     padding: '20px 24px',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid var(--cloistr-border)',
   };
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: '8px 16px',
     border: 'none',
-    backgroundColor: isActive ? '#3b82f6' : 'transparent',
-    color: isActive ? '#ffffff' : '#6b7280',
+    backgroundColor: isActive ? 'var(--cloistr-primary)' : 'transparent',
+    color: isActive ? 'white' : 'var(--cloistr-text-muted)',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 500,
@@ -165,7 +165,7 @@ export function ShareDialog({
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px 12px',
-    border: '1px solid #d1d5db',
+    border: '1px solid var(--cloistr-border)',
     borderRadius: '6px',
     fontSize: '14px',
     outline: 'none',
@@ -182,8 +182,8 @@ export function ShareDialog({
 
   const primaryButtonStyle: React.CSSProperties = {
     ...buttonStyle,
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
+    backgroundColor: 'var(--cloistr-primary)',
+    color: 'white',
   };
 
   return (
@@ -197,7 +197,7 @@ export function ShareDialog({
             </h2>
             <button
               onClick={onClose}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: '#6b7280' }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--cloistr-text-muted)' }}
             >
               ×
             </button>
@@ -217,7 +217,7 @@ export function ShareDialog({
         {/* Content */}
         <div style={{ padding: '20px 24px', overflowY: 'auto', maxHeight: 'calc(80vh - 200px)' }}>
           {error && (
-            <div style={{ padding: '12px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '6px', marginBottom: '16px' }}>
+            <div style={{ padding: '12px', backgroundColor: 'color-mix(in srgb, var(--cloistr-error) 10%, transparent)', color: 'color-mix(in srgb, var(--cloistr-error) 80%, var(--cloistr-text))', borderRadius: '6px', marginBottom: '16px' }}>
               {error}
             </div>
           )}
@@ -260,7 +260,7 @@ export function ShareDialog({
 
               {/* Existing shares */}
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#374151' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: 'var(--cloistr-text)' }}>
                   People with access ({shares.filter(s => s.type === 'pubkey').length})
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -272,7 +272,7 @@ export function ShareDialog({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '10px 12px',
-                        backgroundColor: '#f9fafb',
+                        backgroundColor: 'var(--cloistr-bg-elevated)',
                         borderRadius: '6px',
                         opacity: isShareValid(share) ? 1 : 0.5,
                       }}
@@ -282,7 +282,7 @@ export function ShareDialog({
                           {formatPubkey(share.recipientPubkey || '')}
                         </div>
                         {share.label && (
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{share.label}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--cloistr-text-muted)' }}>{share.label}</div>
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -297,14 +297,14 @@ export function ShareDialog({
                             <option value="edit">Edit</option>
                           </select>
                         ) : (
-                          <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--cloistr-text-muted)' }}>
                             {PERMISSION_LABELS[share.permission]}
                           </span>
                         )}
                         {canManageShares && (
                           <button
                             onClick={() => onRevokeShare(share.id)}
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloistr-error)' }}
                             title="Remove"
                           >
                             ×
@@ -314,7 +314,7 @@ export function ShareDialog({
                     </div>
                   ))}
                   {shares.filter(s => s.type === 'pubkey').length === 0 && (
-                    <div style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--cloistr-text-muted)', padding: '20px' }}>
                       No one has access yet
                     </div>
                   )}
@@ -394,7 +394,7 @@ export function ShareDialog({
                       type="text"
                       value={generatedLink.url}
                       readOnly
-                      style={{ ...inputStyle, flex: 1, backgroundColor: '#f9fafb' }}
+                      style={{ ...inputStyle, flex: 1, backgroundColor: 'var(--cloistr-bg-elevated)' }}
                     />
                     <button
                       onClick={handleCopyLink}
@@ -403,13 +403,13 @@ export function ShareDialog({
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--cloistr-text-muted)', marginTop: '8px' }}>
                     Anyone with this link can {selectedPermission} this document.
                     {generatedLink.expiresAt && ` Expires ${formatDate(generatedLink.expiresAt)}.`}
                   </p>
                   <button
                     onClick={() => setGeneratedLink(null)}
-                    style={{ ...buttonStyle, marginTop: '12px', backgroundColor: '#f3f4f6', color: '#374151' }}
+                    style={{ ...buttonStyle, marginTop: '12px', backgroundColor: 'var(--cloistr-bg-elevated)', color: 'var(--cloistr-text)' }}
                   >
                     Create another link
                   </button>
@@ -418,7 +418,7 @@ export function ShareDialog({
 
               {/* Existing link shares */}
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#374151' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: 'var(--cloistr-text)' }}>
                   Active links ({shares.filter(s => s.type === 'link').length})
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -430,7 +430,7 @@ export function ShareDialog({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '10px 12px',
-                        backgroundColor: '#f9fafb',
+                        backgroundColor: 'var(--cloistr-bg-elevated)',
                         borderRadius: '6px',
                         opacity: isShareValid(share) ? 1 : 0.5,
                       }}
@@ -439,7 +439,7 @@ export function ShareDialog({
                         <div style={{ fontSize: '13px', fontWeight: 500 }}>
                           {PERMISSION_LABELS[share.permission]}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--cloistr-text-muted)' }}>
                           Created {formatDate(share.createdAt)}
                           {share.expiresAt && ` · Expires ${formatDate(share.expiresAt)}`}
                           {share.maxViews && ` · ${share.viewCount}/${share.maxViews} views`}
@@ -448,7 +448,7 @@ export function ShareDialog({
                       {canManageShares && (
                         <button
                           onClick={() => onRevokeShare(share.id)}
-                          style={{ ...buttonStyle, backgroundColor: '#fef2f2', color: '#991b1b' }}
+                          style={{ ...buttonStyle, backgroundColor: 'color-mix(in srgb, var(--cloistr-error) 10%, transparent)', color: 'color-mix(in srgb, var(--cloistr-error) 80%, var(--cloistr-text))' }}
                         >
                           Revoke
                         </button>
@@ -456,7 +456,7 @@ export function ShareDialog({
                     </div>
                   ))}
                   {shares.filter(s => s.type === 'link').length === 0 && (
-                    <div style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--cloistr-text-muted)', padding: '20px' }}>
                       No active links
                     </div>
                   )}
