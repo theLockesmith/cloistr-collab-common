@@ -5,6 +5,30 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { SyncProvider, NostrSyncConfig, NostrUpdateMessage } from './types.js';
 
 /**
+ * Browser+Node-safe base64 for Yjs updates. Node's `Buffer` is not defined in
+ * the browser (surfaced as "ReferenceError: Buffer is not defined" in NostrSync
+ * when the provider flushed an update), so encode/decode via btoa/atob with
+ * chunking to avoid blowing the call stack on large binary updates.
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000; // 32k chars per apply() to stay within arg limits
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
  * Nostr-based sync provider for Yjs documents
  * Uses ephemeral events (kind 25000-29999) for real-time collaboration
  */
@@ -113,7 +137,7 @@ export class NostrSyncProvider implements SyncProvider {
     try {
       const message: NostrUpdateMessage = {
         docId: this.config.docId,
-        update: Buffer.from(update).toString('base64'),
+        update: bytesToBase64(update),
         timestamp: Date.now(),
         sender: this.getClientId(),
         room: this.config.roomPubkey,
@@ -190,7 +214,7 @@ export class NostrSyncProvider implements SyncProvider {
           return; // Wrong document
         }
 
-        const updateData = Buffer.from(message.update, 'base64');
+        const updateData = base64ToBytes(message.update);
 
         // Apply the remote update
         Y.applyUpdate(this.doc, updateData, this);
