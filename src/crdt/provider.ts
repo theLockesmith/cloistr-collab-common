@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { Awareness } from 'y-protocols/awareness.js';
 import { Event, UnsignedEvent, Relay } from 'nostr-tools';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -47,6 +48,17 @@ export class NostrSyncProvider implements SyncProvider {
   private static readonly UPDATE_KIND = 25078; // Ephemeral collab update
   private static readonly HEARTBEAT_KIND = 25079; // Ephemeral presence heartbeat
 
+  // Yjs awareness (presence/cursors). Editor bindings that add live-cursor
+  // support — TipTap CollaborationCursor (docs) and y-excalidraw (whiteboard) —
+  // dereference `provider.awareness.setLocalStateField`/`.getStates()` the
+  // moment they mount. NostrSyncProvider previously had no awareness, so those
+  // bindings crashed ("provider.awareness is undefined" / "this.awareness is
+  // undefined"). Expose a real Awareness so the provider is a drop-in for the
+  // y-websocket-like interface those bindings expect. (Remote presence sync
+  // over Nostr is a follow-up; a local instance is enough to stop the crash and
+  // drive single-user local awareness.)
+  public readonly awareness: Awareness;
+
   // Event handlers
   public onUpdate?: (update: Uint8Array, origin: any) => void;
   public onConnect?: () => void;
@@ -61,6 +73,8 @@ export class NostrSyncProvider implements SyncProvider {
       persist: true,
       ...config,
     };
+    this.awareness = new Awareness(this.doc);
+
     // Listen for document updates to broadcast
     this.doc.on('update', this.handleLocalUpdate.bind(this));
 
@@ -160,6 +174,7 @@ export class NostrSyncProvider implements SyncProvider {
   destroy(): void {
     this.disconnect();
     this.doc.off('update', this.handleLocalUpdate);
+    this.awareness.destroy();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
