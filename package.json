@@ -1,6 +1,6 @@
 {
   "name": "@cloistr/collab-common",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Shared collaboration infrastructure for Cloistr apps",
   "type": "module",
   "main": "dist/index.js",
@@ -79,7 +79,7 @@
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.0",
-    "@cloistr/auth": "^0.1.0"
+    "@cloistr/auth": "^0.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
