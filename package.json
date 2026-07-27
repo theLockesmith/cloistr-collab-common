@@ -74,7 +74,7 @@
     "lib0": "^0.2.97",
     "libsodium-wrappers": "^0.8.2",
     "nostr-tools": "^2.10.0",
-    "react": "^18.0.0",
+    "react": "^18.3.1",
     "react-dom": "^18.0.0",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
@@ -93,7 +93,7 @@
     "vitest": "^2.1.0"
   },
   "peerDependencies": {
-    "react": "^18.0.0",
+    "react": "^18.3.1",
     "react-dom": "^18.0.0"
   },
   "keywords": [
