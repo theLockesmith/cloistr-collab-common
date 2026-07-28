@@ -6,6 +6,9 @@ stages:
 include:
   - project: 'coldforge/ci-templates'
     ref: main
+    file: '/templates/cloistr-rules.yml'
+  - project: 'coldforge/ci-templates'
+    ref: main
     file: '/templates/npm-publish.yml'
 
 variables:
@@ -13,6 +16,7 @@ variables:
 
 # Build and type-check
 build:
+  extends: .cloistr-rules
   stage: build
   image: node:${NODE_VERSION}-alpine
   script:
