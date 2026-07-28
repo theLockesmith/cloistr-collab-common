@@ -6,6 +6,27 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { SyncProvider, NostrSyncConfig, NostrUpdateMessage } from './types.js';
 
 /**
+ * Parse the required NIP-13 difficulty out of a relay's PoW rejection.
+ *
+ * Cloistr's relay emits "pow: ... (got N, need M)" for both the global gate and the
+ * per-trust-level WoT gate. Returns the required bit count M, or null if the error is
+ * not a PoW rejection (in which case the caller must not retry). Tolerant of the reason
+ * being wrapped in an Error, a bare string, or the "reason" field of a relay OK frame.
+ */
+export function parsePoWRequirement(error: unknown): number | null {
+  const msg =
+    error instanceof Error ? error.message
+    : typeof error === 'string' ? error
+    : error && typeof (error as { reason?: unknown }).reason === 'string' ? (error as { reason: string }).reason
+    : '';
+  if (!/^\s*pow:/i.test(msg) && !/proof of work/i.test(msg)) {
+    return null;
+  }
+  const m = msg.match(/need\s+(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
  * Browser+Node-safe base64 for Yjs updates. Node's `Buffer` is not defined in
  * the browser (surfaced as "ReferenceError: Buffer is not defined" in NostrSync
  * when the provider flushed an update), so encode/decode via btoa/atob with
@@ -157,13 +178,11 @@ export class NostrSyncProvider implements SyncProvider {
         room: this.config.roomPubkey,
       };
 
-      const event = await this.createEvent(
+      await this.publishWithPoWRetry(
         NostrSyncProvider.UPDATE_KIND,
         JSON.stringify(message),
         this.getEventTags()
       );
-
-      await this.relay.publish(event);
 
     } catch (error) {
       console.error('[NostrSync] Failed to send update:', error);
@@ -294,13 +313,11 @@ export class NostrSyncProvider implements SyncProvider {
             peerCount: this.peers.size,
           };
 
-          const event = await this.createEvent(
+          await this.publishWithPoWRetry(
             NostrSyncProvider.HEARTBEAT_KIND,
             JSON.stringify(heartbeat),
             this.getEventTags()
           );
-
-          await this.relay.publish(event);
           this.lastHeartbeat = Date.now();
 
         } catch (error) {
@@ -313,7 +330,20 @@ export class NostrSyncProvider implements SyncProvider {
     setInterval(sendHeartbeat, 30000);
   }
 
-  private async createEvent(kind: number, content: string, tags: string[][]): Promise<Event> {
+  // Hard ceiling on PoW difficulty we will mine, even if a relay asks for more. NIP-13
+  // is O(2^bits): 8 bits is ~256 hashes (imperceptible), but an unbounded or hostile
+  // relay must not be able to make us burn the CPU. ~22 bits ≈ 4M hashes is already
+  // seconds; beyond that we refuse rather than hang.
+  private static readonly MAX_POW_DIFFICULTY = 24;
+
+  // powDifficulty overrides this.config.powDifficulty for a single event, used by the
+  // retry-on-reject path to mine to the exact difficulty the relay demanded.
+  private async createEvent(
+    kind: number,
+    content: string,
+    tags: string[][],
+    powDifficulty?: number
+  ): Promise<Event> {
     if (!this.pubkey) {
       throw new Error('Not authenticated - pubkey not available');
     }
@@ -321,13 +351,15 @@ export class NostrSyncProvider implements SyncProvider {
     let eventTags = [...tags];
     let created_at = Math.floor(Date.now() / 1000);
 
-    // Add NIP-13 PoW if required
-    if (this.config.powDifficulty && this.config.powDifficulty > 0) {
+    // Add NIP-13 PoW if required. The explicit override (from a relay rejection) wins
+    // over the configured default; either way we cap the work we are willing to do.
+    const target = powDifficulty ?? this.config.powDifficulty ?? 0;
+    if (target > 0) {
       const result = await this.computePoW(
         kind,
         content,
         eventTags,
-        this.config.powDifficulty,
+        target,
         created_at
       );
       eventTags.push(['nonce', result.nonce.toString(), result.difficulty.toString()]);
@@ -344,6 +376,44 @@ export class NostrSyncProvider implements SyncProvider {
     };
 
     return await this.config.signer.signEvent(unsignedEvent);
+  }
+
+  /**
+   * Publish an event, transparently satisfying a relay's NIP-13 proof-of-work demand.
+   *
+   * WoT relays gate low-trust pubkeys behind per-trust-level PoW (e.g. Cloistr's relay
+   * requires 8 bits for unknown keys). The required difficulty is per-pubkey and served
+   * only on rejection — it cannot be read ahead of time from NIP-11 — so the correct
+   * pattern is: publish, and if rejected with a "pow: ... need N" reason, mine to N and
+   * republish. At 8 bits this is ~256 hashes, imperceptible to the user.
+   *
+   * This is why no PoW is done up front by default: most events to most relays need
+   * none, so we pay the (tiny) cost only when a relay actually asks.
+   */
+  private async publishWithPoWRetry(kind: number, content: string, tags: string[][]): Promise<void> {
+    const relay = this.relay;
+    if (!relay) {
+      throw new Error('Not connected - relay unavailable');
+    }
+    const event = await this.createEvent(kind, content, tags);
+    try {
+      await relay.publish(event);
+      return;
+    } catch (error) {
+      const needed = parsePoWRequirement(error);
+      if (needed === null) {
+        throw error; // Not a PoW rejection — surface it unchanged.
+      }
+      if (needed > NostrSyncProvider.MAX_POW_DIFFICULTY) {
+        throw new Error(
+          `relay demands ${needed}-bit PoW, above the client cap of ` +
+            `${NostrSyncProvider.MAX_POW_DIFFICULTY}; refusing to mine`
+        );
+      }
+      // Re-mine to the exact difficulty the relay asked for, then retry once.
+      const mined = await this.createEvent(kind, content, tags, needed);
+      await relay.publish(mined);
+    }
   }
 
   /**
