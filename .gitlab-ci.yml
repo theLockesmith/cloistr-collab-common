@@ -3,6 +3,11 @@ stages:
   - publish
   - trigger
 
+include:
+  - project: 'coldforge/ci-templates'
+    ref: main
+    file: '/templates/npm-publish.yml'
+
 variables:
   NODE_VERSION: "22"
 
@@ -24,14 +29,11 @@ build:
 
 # Publish to GitLab npm registry
 publish:
-  stage: publish
-  image: node:${NODE_VERSION}-alpine
+  extends: .npm-publish
+  variables:
+    NPM_PUBLISH_FLAGS: ""
   dependencies:
     - build
-  script:
-    - echo "@cloistr:registry=https://git.aegis-hq.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-    - echo "//git.aegis-hq.xyz/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-    - npm publish
   only:
     - master
     - tags
