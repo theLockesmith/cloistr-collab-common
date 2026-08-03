@@ -384,7 +384,20 @@ export class NostrSyncProvider implements SyncProvider {
         target,
         created_at
       );
-      eventTags.push(['nonce', result.nonce.toString(), result.difficulty.toString()]);
+      // The committed difficulty MUST be the TARGET we mined against, not the
+      // difficulty we happened to achieve.
+      //
+      // computePoW hashes the event with ['nonce', n, target] to find its nonce.
+      // Attaching ['nonce', n, achieved] instead changes the tag, which changes
+      // the serialization, which changes the event ID -- so the relay hashes an
+      // event that was never mined and measures essentially random difficulty.
+      // Observed live: client logged "PoW found: nonce=139, difficulty=9" and the
+      // relay rejected the same event with "pow: low trust requires proof of work
+      // (got 1, need 8)". Every collaborative publish failed this way.
+      //
+      // NIP-13 defines the third element as the target commitment anyway, so this
+      // is also what the spec asks for.
+      eventTags.push(['nonce', result.nonce.toString(), target.toString()]);
       // Use the same created_at that was used for PoW computation
       created_at = result.created_at;
     }
