@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness.js';
-import { Event, UnsignedEvent, Relay } from 'nostr-tools';
+import { Event, UnsignedEvent, Relay, type VerifiedEvent } from 'nostr-tools';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { SyncProvider, NostrSyncConfig, NostrUpdateMessage } from './types.js';
@@ -24,6 +24,28 @@ export function parsePoWRequirement(error: unknown): number | null {
   }
   const m = msg.match(/need\s+(\d+)/i);
   return m ? parseInt(m[1], 10) : null;
+}
+
+/**
+ * Detect a NIP-42 rejection.
+ *
+ * Per NIP-01 a relay refuses an event it wants authentication for with an OK
+ * frame whose reason is machine-readable-prefixed `auth-required:`. Cloistr's
+ * relay sends exactly:
+ *
+ *   auth-required: authentication required to publish events
+ *
+ * Same shape as the `pow:` prefix above, so it gets the same treatment: publish,
+ * and only authenticate if the relay actually asks. Note the prefix is checked
+ * rather than the prose, which is relay-specific and not contractual.
+ */
+export function isAuthRequired(error: unknown): boolean {
+  const msg =
+    error instanceof Error ? error.message
+    : typeof error === 'string' ? error
+    : error && typeof (error as { reason?: unknown }).reason === 'string' ? (error as { reason: string }).reason
+    : '';
+  return /^\s*auth-required:/i.test(msg);
 }
 
 /**
@@ -400,9 +422,20 @@ export class NostrSyncProvider implements SyncProvider {
       await relay.publish(event);
       return;
     } catch (error) {
+      // NIP-42: the relay will only say it wants auth when we try to publish,
+      // so authenticate on demand and retry once. Without this, every publish
+      // to an auth-gated relay fails — which is what silently broke whiteboard
+      // saves and the space contacts import (observed 2026-08-02: the relay
+      // answered "auth-required: authentication required to publish events"
+      // and nothing ever responded to the challenge).
+      if (isAuthRequired(error)) {
+        await this.authenticate();
+        await relay.publish(event);
+        return;
+      }
       const needed = parsePoWRequirement(error);
       if (needed === null) {
-        throw error; // Not a PoW rejection — surface it unchanged.
+        throw error; // Neither an auth nor a PoW rejection — surface unchanged.
       }
       if (needed > NostrSyncProvider.MAX_POW_DIFFICULTY) {
         throw new Error(
@@ -412,8 +445,48 @@ export class NostrSyncProvider implements SyncProvider {
       }
       // Re-mine to the exact difficulty the relay asked for, then retry once.
       const mined = await this.createEvent(kind, content, tags, needed);
-      await relay.publish(mined);
+      try {
+        await relay.publish(mined);
+      } catch (retryError) {
+        // A relay can gate on both: PoW first, then auth. Handle that ordering
+        // rather than failing on the second gate after clearing the first.
+        if (!isAuthRequired(retryError)) throw retryError;
+        await this.authenticate();
+        await relay.publish(mined);
+      }
     }
+  }
+
+  /**
+   * Respond to a NIP-42 AUTH challenge.
+   *
+   * nostr-tools stores the relay's challenge on the connection and builds the
+   * kind-22242 event; we only supply the signature, using the same signer that
+   * signs document updates. Signing is delegated (NIP-46 bunker in production),
+   * so this is the one place the user's key is asked to prove identity to the
+   * relay — it never leaves the signer.
+   */
+  private async authenticate(): Promise<void> {
+    const relay = this.relay;
+    if (!relay) {
+      throw new Error('Not connected - relay unavailable');
+    }
+    if (!this.pubkey) {
+      throw new Error('Not authenticated - pubkey not available');
+    }
+    const pubkey = this.pubkey;
+    const signer = this.config.signer;
+    await relay.auth(async (authEvent) => {
+      // nostr-tools hands us an EventTemplate (no pubkey); the signer wants a
+      // full UnsignedEvent, so attach the identity we already authenticated as.
+      const signed = await signer.signEvent({ ...authEvent, pubkey });
+      // nostr-tools brands events it verified itself with an internal symbol.
+      // Our signer returns a genuinely signed event without that marker, and
+      // the relay verifies the signature regardless — so the cast asserts the
+      // brand, not the validity.
+      return signed as VerifiedEvent;
+    });
+    console.log('[NostrSync] Completed NIP-42 AUTH');
   }
 
   /**
