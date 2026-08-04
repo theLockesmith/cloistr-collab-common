@@ -80,6 +80,10 @@ export class NostrSyncProvider implements SyncProvider {
   private doc: Y.Doc;
   private config: NostrSyncConfig;
   private relay: Relay | null = null;
+  /** Active REQ, kept so it can be replaced after NIP-42 AUTH. */
+  private subscription: { close: () => void } | null = null;
+  /** True once NIP-42 AUTH has completed for the current connection. */
+  private authenticated = false;
   private isConnected = false;
   private peers = new Set<string>();
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -158,6 +162,11 @@ export class NostrSyncProvider implements SyncProvider {
       this.relay.onclose = () => {
         console.log(`[NostrSync] Disconnected from ${this.config.relayUrl}`);
         this.isConnected = false;
+        // A new connection needs a fresh NIP-42 handshake, and therefore a fresh
+        // post-auth re-subscribe. Without this reset the reconnect would keep the
+        // stale "already authenticated" state and never re-request the document.
+        this.authenticated = false;
+        this.subscription = null;
         this.onDisconnect?.();
         this.scheduleReconnect();
       };
@@ -246,7 +255,12 @@ export class NostrSyncProvider implements SyncProvider {
 
     console.log('[NostrSync] Subscribing to updates with filter:', filter);
 
-    this.relay.subscribe([filter], {
+    // Replace any previous subscription. Re-subscribing after NIP-42 AUTH is the
+    // whole point (see authenticate()), and leaking the old REQ would leave a
+    // duplicate feed delivering the same events twice.
+    this.subscription?.close();
+
+    this.subscription = this.relay.subscribe([filter], {
       onevent: (event: Event) => {
         this.handleRemoteEvent(event);
       },
@@ -499,7 +513,27 @@ export class NostrSyncProvider implements SyncProvider {
       // brand, not the validity.
       return signed as VerifiedEvent;
     });
+    const firstAuth = !this.authenticated;
+    this.authenticated = true;
     console.log('[NostrSync] Completed NIP-42 AUTH');
+
+    // RE-SUBSCRIBE. This is not belt-and-braces -- without it the document never
+    // loads on an auth-gated relay.
+    //
+    // The observed sequence was: REQ -> EOSE (0 events, because we were not yet
+    // authenticated) -> "Initial sync complete" -> AUTH completes -> nothing.
+    // The relay answers an unauthenticated REQ with an immediate EOSE rather
+    // than an error, so the client believes it has synced an empty document.
+    // Nothing ever re-requested, so historical events were never delivered:
+    // whiteboard drew fine, published fine, and came back blank on every reload
+    // while the status bar sat on "Loading...".
+    //
+    // Re-issuing the REQ once auth completes is what actually fetches the
+    // document. Guarded by `authenticated` so a later re-auth on the same
+    // connection does not thrash the subscription.
+    if (firstAuth) {
+      this.subscribeToUpdates();
+    }
   }
 
   /**
