@@ -5,8 +5,12 @@
  */
 
 import * as Y from 'yjs';
-import { Relay, Event, UnsignedEvent, Filter } from 'nostr-tools';
+import { Relay, Event, UnsignedEvent, Filter, type VerifiedEvent } from 'nostr-tools';
 import { BlobStore } from '../storage/blossom.js';
+// Shared with NostrSyncProvider so both publish paths agree on what a NIP-42
+// rejection looks like. Having two definitions is how this path came to be
+// missed when the sync-side fix landed.
+import { isAuthRequired } from '../crdt/provider.js';
 import type { StorageSignerInterface } from '../storage/types.js';
 import {
   PersistenceConfig,
@@ -345,7 +349,34 @@ export class DocumentPersistence {
       };
 
       const signedEvent = await this.config.signer.signEvent(unsignedEvent);
-      await relay.publish(signedEvent);
+
+      // NIP-42: an auth-gated relay refuses the publish until we answer its
+      // challenge, and it only asks when we try. Authenticate on demand and
+      // retry once -- the same pattern NostrSyncProvider uses.
+      //
+      // This path was missed when that fix landed, and the consequence was
+      // silent and total: saving uploads the snapshot blob to Blossom
+      // successfully (HTTP 200), then fails to publish the POINTER event naming
+      // that blob. Nothing records where the snapshot went, so on reload the
+      // document has no pointer to fetch, the canvas comes back blank, and the
+      // loading indicator waits forever for a fetch that never starts. The blob
+      // is sitting in Blossom, orphaned.
+      try {
+        await relay.publish(signedEvent);
+      } catch (error) {
+        if (!isAuthRequired(error)) throw error;
+        await relay.auth(async (authEvent) => {
+          const signed = await this.config.signer.signEvent({
+            ...authEvent,
+            pubkey: this.pubkey!,
+          });
+          // nostr-tools brands events it verified itself; ours is genuinely
+          // signed without that marker, and the relay verifies the signature
+          // regardless -- so this asserts the brand, not the validity.
+          return signed as VerifiedEvent;
+        });
+        await relay.publish(signedEvent);
+      }
 
       return signedEvent.id;
 
