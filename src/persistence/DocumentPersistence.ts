@@ -5,7 +5,7 @@
  */
 
 import * as Y from 'yjs';
-import { Relay, Event, UnsignedEvent, Filter } from 'nostr-tools';
+import { Relay, Event, UnsignedEvent, Filter, type VerifiedEvent } from 'nostr-tools';
 import { BlobStore } from '../storage/blossom.js';
 import type { StorageSignerInterface } from '../storage/types.js';
 import {
@@ -18,6 +18,7 @@ import {
   BlobDownloadError,
   DocumentType,
 } from './types.js';
+import { isAuthRequired } from './relay-errors.js';
 
 const SNAPSHOT_KIND = 30078; // NIP-78 application-specific data
 const APP_VERSION = '1.0.0';
@@ -313,7 +314,15 @@ export class DocumentPersistence {
   }
 
   /**
-   * Publish a snapshot reference event to Nostr
+   * Publish a snapshot reference event to Nostr.
+   *
+   * Cloistr's relay gates publishes behind NIP-42 authentication. `relay.publish`
+   * throws `auth-required: …` when the relay has not yet authenticated this
+   * connection. The fix: catch the rejection, authenticate once, and retry.
+   *
+   * signEvent is NIP-46 (remote signer) — if the signer is unreachable, the
+   * relay.auth() callback will stall. A 10-second timeout ensures `relay.close()`
+   * in the finally block is not blocked indefinitely.
    */
   private async publishSnapshotEvent(hash: string, size: number): Promise<string> {
     const relay = await Relay.connect(this.config.relayUrl);
@@ -345,7 +354,32 @@ export class DocumentPersistence {
       };
 
       const signedEvent = await this.config.signer.signEvent(unsignedEvent);
-      await relay.publish(signedEvent);
+
+      try {
+        await relay.publish(signedEvent);
+      } catch (error) {
+        if (!isAuthRequired(error)) throw error;
+
+        // NIP-42: relay demands authentication before publishing.
+        // Authenticate once, then retry the publish.
+        const pubkey = this.pubkey!;
+        const signer = this.config.signer;
+        await Promise.race([
+          relay.auth(async (authEvent) => {
+            const signed = await signer.signEvent({ ...authEvent, pubkey });
+            // nostr-tools brands events it verified itself; ours is legitimately
+            // signed — cast asserts the brand without re-verifying.
+            return signed as VerifiedEvent;
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('[Persistence] NIP-42 auth timed out after 10s')),
+              10000
+            )
+          ),
+        ]);
+        await relay.publish(signedEvent);
+      }
 
       return signedEvent.id;
 
@@ -355,7 +389,21 @@ export class DocumentPersistence {
   }
 
   /**
-   * Fetch the latest snapshot event for this document
+   * Fetch the latest snapshot event for this document.
+   *
+   * IMPORTANT: use `await new Promise(...)` rather than `return new Promise(...)`.
+   *
+   * With `return new Promise(...)`, the try block exits as soon as `return` is
+   * evaluated — which is immediately, before the Promise settles. The `finally`
+   * block then fires right away and calls `relay.close()`, which calls
+   * `closeAllSubscriptions()` synchronously. By the time EOSE arrives (a
+   * macrotask), `relay.openSubs.get(subId)` returns undefined and the EOSE
+   * handler is silently dropped. The inner resolve() fires only from the
+   * 10-second timeout, with `found` still null: every reload starts blank.
+   *
+   * With `await new Promise(...)`, the async function suspends here. EOSE
+   * arrives, `oneose` fires, the Promise resolves, then `finally` runs and
+   * closes the relay cleanly.
    */
   private async fetchLatestSnapshotEvent(): Promise<Event | null> {
     const relay = await Relay.connect(this.config.relayUrl);
@@ -368,7 +416,8 @@ export class DocumentPersistence {
         limit: 1,
       };
 
-      return new Promise<Event | null>((resolve) => {
+      // await (not return) so the finally block runs AFTER the Promise settles.
+      const result = await new Promise<Event | null>((resolve) => {
         let found: Event | null = null;
 
         const sub = relay.subscribe([filter], {
@@ -390,6 +439,8 @@ export class DocumentPersistence {
           resolve(found);
         }, 10000);
       });
+
+      return result;
 
     } finally {
       await relay.close();
