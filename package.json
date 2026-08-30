@@ -64,7 +64,7 @@
     "build:umd": "vite build",
     "build:all": "tsc && vite build",
     "dev": "tsc --watch",
-    "test": "vitest",
+    "test": "vitest run",
     "lint": "eslint src --ext ts,tsx",
     "clean": "rm -rf dist"
   },
