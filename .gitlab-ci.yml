@@ -7,6 +7,9 @@ stages:
 include:
   - project: 'coldforge/ci-templates'
     ref: main
+    file: '/templates/cloistr-rules.yml'
+  - project: 'coldforge/ci-templates'
+    ref: main
     file: '/templates/npm-publish.yml'
 
 variables:
