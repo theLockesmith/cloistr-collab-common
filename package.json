@@ -112,9 +112,5 @@
   },
   "publishConfig": {
     "@cloistr:registry": "https://git.aegis-hq.xyz/api/v4/projects/44/packages/npm/"
-  },
-  "allowScripts": {
-    "esbuild@0.25.12": true,
-    "esbuild@0.21.5": true
   }
 }
