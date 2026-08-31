@@ -2,7 +2,7 @@
  * Client-side encryption utilities using XChaCha20-Poly1305
  */
 
-import * as sodium from 'libsodium-wrappers';
+import sodium from 'libsodium-wrappers';
 import { EncryptedBlob, EncryptionError } from './types.js';
 
 // Ensure sodium is ready
