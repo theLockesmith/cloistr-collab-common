@@ -16,7 +16,17 @@ variables:
   NODE_VERSION: "22"
 
 # Build and type-check
+#
+# `extends: .cloistr-rules` is load-bearing here for the same reason the `test`
+# job below carries it. Without it this job has no `rules:` and no `only:`, so it
+# falls back to the legacy default `only: [branches, tags]` — and a merge-request
+# pipeline is neither, so the job is NOT CREATED AT ALL, with no error and no
+# skipped badge. Measured 2026-09-04 on merge request !42: pipeline 44267 created
+# exactly one job, `test`. The typecheck this package publishes on never ran
+# against that MR, only after it merged, which is backwards from the point of a
+# gate. ~25 apps consume this package.
 build:
+  extends: .cloistr-rules
   stage: build
   image: node:${NODE_VERSION}-alpine
   script:
