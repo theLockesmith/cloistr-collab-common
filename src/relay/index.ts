@@ -38,6 +38,9 @@ export {
   useRelayPrefsHook,
 } from './hooks.js';
 
+// Export timestamp monotonicity for replaceable events
+export { nextCreatedAt } from './created-at.js';
+
 // Export relay preferences
 export {
   getRelayPrefs,

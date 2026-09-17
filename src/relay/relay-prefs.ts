@@ -12,6 +12,7 @@
  */
 
 import type { Event, Filter } from 'nostr-tools';
+import { nextCreatedAt } from './created-at.js';
 
 /**
  * Relay preference entry
@@ -449,7 +450,7 @@ export function invalidateCache(pubkey?: string): void {
 /**
  * Create a cloistr-relays event for signing
  */
-export function createRelayPrefsEvent(relays: RelayPref[]): Omit<Event, 'id' | 'sig' | 'pubkey'> {
+export function createRelayPrefsEvent(relays: RelayPref[], pubkey?: string): Omit<Event, 'id' | 'sig' | 'pubkey'> {
   const tags: string[][] = [['d', RELAY_PREFS_D_TAG]];
 
   for (const relay of relays) {
@@ -464,7 +465,9 @@ export function createRelayPrefsEvent(relays: RelayPref[]): Omit<Event, 'id' | '
 
   return {
     kind: RELAY_PREFS_KIND,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: pubkey
+      ? nextCreatedAt(`${RELAY_PREFS_KIND}:${pubkey}:${RELAY_PREFS_D_TAG}`)
+      : Math.floor(Date.now() / 1000),
     tags,
     content: '',
   };

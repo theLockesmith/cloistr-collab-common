@@ -19,6 +19,7 @@ import {
   DocumentType,
 } from './types.js';
 import { isAuthRequired } from './relay-errors.js';
+import { nextCreatedAt } from '../relay/created-at.js';
 
 const SNAPSHOT_KIND = 30078; // NIP-78 application-specific data
 const APP_VERSION = '1.0.0';
@@ -340,9 +341,11 @@ export class DocumentPersistence {
         createdAt: this._createdAt,
       };
 
+      const addressKey = `${SNAPSHOT_KIND}:${this.pubkey}:${this.config.documentId}`;
+
       const unsignedEvent: UnsignedEvent = {
         kind: SNAPSHOT_KIND,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nextCreatedAt(addressKey),
         tags: [
           ['d', this.config.documentId],
           ['t', 'yjs-snapshot'],
