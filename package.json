@@ -78,7 +78,7 @@
     "react-dom": "^18.3.1",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.7",
-    "yjs": "^13.6.32",
+    "yjs": "^13.6.33",
     "@cloistr/auth": "^0.6.0"
   },
   "devDependencies": {
