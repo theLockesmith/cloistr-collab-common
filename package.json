@@ -71,7 +71,7 @@
   "dependencies": {
     "@noble/hashes": "^2.4.0",
     "@types/libsodium-wrappers": "^0.8.2",
-    "lib0": "^0.2.118",
+    "lib0": "^0.2.119",
     "libsodium-wrappers": "^0.8.4",
     "nostr-tools": "^2.25.2",
     "react": "^18.3.1",
