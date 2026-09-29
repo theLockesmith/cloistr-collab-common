@@ -1,5 +1,4 @@
 import * as Y from 'yjs';
-import { IndexeddbPersistence } from 'y-indexeddb';
 import { DocType, DocTypeMap } from './types.js';
 
 /**
@@ -81,15 +80,6 @@ export function getStateVector(doc: Y.Doc): Uint8Array {
  */
 export function getUpdatesSinceStateVector(doc: Y.Doc, stateVector: Uint8Array): Uint8Array {
   return Y.encodeStateAsUpdate(doc, stateVector);
-}
-
-/**
- * Initialize persistence for a document using IndexedDB
- */
-export function initPersistence(doc: Y.Doc, docId: string): IndexeddbPersistence {
-  const persistence = new IndexeddbPersistence(docId, doc);
-
-  return persistence;
 }
 
 /**
