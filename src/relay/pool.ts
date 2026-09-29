@@ -4,7 +4,7 @@
  */
 
 import { Relay, Event, Filter } from 'nostr-tools';
-import { RelayHealthManager } from '@cloistr/auth';
+import { RelayHealthManager } from '@cloistr/auth/core';
 import type {
   RelayPoolConfig,
   RelayState,

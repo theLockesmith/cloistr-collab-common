@@ -1,6 +1,6 @@
 {
   "name": "@cloistr/collab-common",
-  "version": "0.2.16",
+  "version": "0.3.0",
   "description": "Shared collaboration infrastructure for Cloistr apps",
   "type": "module",
   "main": "dist/index.js",
@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
     },
     "./auth": {
       "types": "./dist/auth/index.d.ts",
@@ -74,12 +78,10 @@
     "lib0": "^0.2.119",
     "libsodium-wrappers": "^0.8.4",
     "nostr-tools": "^2.25.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.33",
-    "@cloistr/auth": "^0.6.0"
+    "@cloistr/auth": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
@@ -95,6 +97,14 @@
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "keywords": [
     "cloistr",

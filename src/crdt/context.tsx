@@ -7,7 +7,8 @@ import {
   DocType,
   SyncProvider
 } from './types.js';
-import { createCollabDoc, initializeDocumentContent, initPersistence } from './document.js';
+import { createCollabDoc, initializeDocumentContent } from './document.js';
+import { initPersistence } from './document-browser.js';
 import { createNostrSyncProvider } from './provider.js';
 
 interface CollabDocContextValue {

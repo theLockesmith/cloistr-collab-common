@@ -19,12 +19,14 @@ export {
   mergeDocuments,
   getStateVector,
   getUpdatesSinceStateVector,
-  initPersistence,
   cloneDocument,
   getDocumentStats,
   validateUpdate,
   initializeDocumentContent,
 } from './document.js';
+
+// Browser-only (requires y-indexeddb)
+export { initPersistence } from './document-browser.js';
 
 export type { DocStats } from './document.js';
 
