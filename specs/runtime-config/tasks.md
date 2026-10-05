@@ -17,20 +17,31 @@
 - [x] Suite: 74 passing, up from 42. The 14 failures in two other files predate
       this branch, verified against a pristine copy of the default branch.
 
-## The proof app (sheets)
+## The proof
 
-Chosen because it is the leanest app that genuinely bakes hostnames in, and it
-exercises both the relay and the file host. Its sibling (slides) is simpler but
-only exercises the file host.
+Originally planned inside the leanest app that genuinely bakes hostnames in.
+That app's tree belongs to another role, and the lane guard was right to refuse
+it: a change made around the owner lands with nobody who knows it is there. The
+mechanism does not need their tree to be proven, so the proof was built
+standalone instead.
 
-- [ ] Replace its own relay literal with the shared reader, matching what the
-      other three already do.
-- [ ] Turn its nginx config into a template with the configuration location.
-- [ ] Add the script tag to `index.html` before the bundle.
-- [ ] Serving-stage environment lines carrying production values, plus the
-      substitution filter.
-- [ ] Build once; run the same image twice with different environment; observe
-      two different relay URLs in a real browser.
+- [x] Real serving base image, the same unprivileged nginx image every frontend
+      uses.
+- [x] The base image's own startup substitution, no custom entrypoint and no
+      script of ours.
+- [x] The freshly compiled reader from this package, copied in unmodified. Worth
+      noting: the checked-out output directory here is root-owned locally, so an
+      ordinary build cannot write it and leaves a month-old file behind. Testing
+      that file would have tested code from before this change.
+- [x] The same one-year immutable cache rule the real apps have, so the
+      exact-match location precedence is tested rather than assumed.
+- [x] Build once; run the same image twice with different environment; two
+      different relay URLs observed in real Chromium. Same image id both times.
+- [x] The no-environment run still reports the production relay. That is the
+      assertion protecting the live service.
+- [x] A control, so the no-store assertion is not vacuous: a sibling script is
+      served with a one-year immutable cache, proving the rule the exact-match
+      location has to outrank is genuinely in force.
 
 ## Where this landed
 
