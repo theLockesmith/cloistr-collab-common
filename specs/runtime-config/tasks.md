@@ -3,16 +3,19 @@
 ## This package
 
 - [x] Test the reader first, red before green.
-- [ ] Add the runtime tier to the service-config module: the runtime type, the
+- [x] Add the runtime tier to the service-config module: the runtime type, the
       global's name as a pinned constant, a signer default that was missing, the
       resolution order, scheme checking that reports without falling back, and a
-      cache reset for tests.
-- [ ] Route this package's own bare production defaults through the reader, so
+      cache reset for tests. 26 tests.
+- [x] Route this package's own bare production defaults through the reader, so
       an app cannot adopt the mechanism and still reach production:
-      - relay-preferences defaults (discovery host and default relay)
+      - relay-preferences defaults (discovery host and default relay), 6 tests
       - the sharing link base used when there is no browser
-- [ ] Bump the minor version by hand. Publishing is manual and the version bump
-      is not automated; without it the publish job goes green and ships nothing.
+- [x] Bump the minor version by hand, 0.3.0 to 0.4.0. Publishing is manual and
+      the version bump is not automated; without it the publish job goes green
+      and ships nothing.
+- [x] Suite: 74 passing, up from 42. The 14 failures in two other files predate
+      this branch, verified against a pristine copy of the default branch.
 
 ## The proof app (sheets)
 
