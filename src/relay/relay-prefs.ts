@@ -13,6 +13,7 @@
 
 import type { Event, Filter } from 'nostr-tools';
 import { nextCreatedAt } from './created-at.js';
+import { getServiceConfig } from '../config/index.js';
 
 /**
  * Relay preference entry
@@ -79,14 +80,30 @@ export const RELAY_PREFS_D_TAG = 'cloistr-relays';
 export const NIP65_KIND = 10002;
 
 /**
- * Default configuration
+ * Default configuration.
+ *
+ * The service URLs come from the shared reader rather than from literals here,
+ * and they are read when they are used rather than when this module is
+ * imported.
+ *
+ * Both of those matter. Literals here would bypass runtime configuration
+ * entirely: an app could adopt the container-start mechanism, point itself at
+ * another environment, and still reach the production discovery service and the
+ * production relay through this path, with nothing in the app's own code to
+ * show why. Reading at import time would make correctness depend on module
+ * import order, which no app controls.
+ *
+ * Exported under an underscore for tests only.
  */
-const DEFAULT_CONFIG: Required<RelayPrefsConfig> = {
-  discoveryUrl: 'https://discover.cloistr.xyz',
-  defaultRelay: 'wss://relay.cloistr.xyz',
-  cacheTtl: 60 * 60 * 1000, // 1 hour
-  queryTimeout: 5000,
-};
+export function _defaultRelayPrefsConfig(): Required<RelayPrefsConfig> {
+  const services = getServiceConfig();
+  return {
+    discoveryUrl: services.discoveryUrl,
+    defaultRelay: services.relayUrl,
+    cacheTtl: 60 * 60 * 1000, // 1 hour
+    queryTimeout: 5000,
+  };
+}
 
 /**
  * In-memory cache for relay preferences
@@ -114,7 +131,7 @@ export async function getRelayPrefs(
     ) => { close: () => void };
   }
 ): Promise<RelayPrefs> {
-  const cfg = { ...DEFAULT_CONFIG, ...config };
+  const cfg = { ..._defaultRelayPrefsConfig(), ...config };
 
   if (!pubkey) {
     return defaultPrefs(cfg);
