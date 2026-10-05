@@ -32,6 +32,13 @@ only exercises the file host.
 - [ ] Build once; run the same image twice with different environment; observe
       two different relay URLs in a real browser.
 
+## Where this landed
+
+Branch `feat/runtime-config`, pushed. Publishing happens on merge to the
+default branch, and governance requires one non-author review, so the package
+version is not live until someone reviews it. That review is the only thing
+between this and adoptable.
+
 ## Delivery
 
 - [ ] Per-environment settings object holding the URLs, and a reference to it
