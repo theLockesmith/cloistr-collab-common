@@ -6,6 +6,25 @@ proof, not from a plan.
 The reasoning, the measurements and the rejected alternatives are in
 `specs/runtime-config/`. This file is the recipe.
 
+## Already proven, not just proposed
+
+Measured 2026-10-05, in a real browser against one locally built image run
+twice:
+
+| | no environment given | environment set |
+|---|---|---|
+| relay the app uses | `wss://relay.cloistr.xyz` | `wss://relay.staging.cloistr.xyz` |
+| environment reported | `production` | `staging` |
+| configuration response | `no-store` | `no-store` |
+| sibling script response | `max-age=31536000, public, immutable` | same |
+
+Both containers ran the same image id. The last row is the control: it shows the
+one-year caching rule genuinely is in force, which is what makes the `no-store`
+on the row above it meaningful rather than vacuous.
+
+The proof harness is in this session's working area, not in any app's tree, and
+its README says how to re-run it.
+
 ## What you get
 
 The app reads its relay, signer, file host and discovery host from
