@@ -16,6 +16,7 @@ import {
   ShareMetadata,
 } from './types.js';
 import type { SignerInterface } from '@cloistr/auth';
+import { getServiceConfig } from '../config/index.js';
 
 /**
  * Generate a unique share ID
@@ -275,9 +276,13 @@ export async function createShare(
   // For link shares, generate the share link
   let link: ShareLink | undefined;
   if (!config.recipientPubkey) {
+    // Outside a browser there is no origin to borrow, so fall back to the app's
+    // own configured URL rather than to a literal. A literal here hands out
+    // share links pointing at production from whichever environment generated
+    // them, which is both wrong and hard to notice.
     const baseUrl = typeof window !== 'undefined'
       ? `${window.location.origin}${window.location.pathname}`
-      : 'https://docs.cloistr.xyz';
+      : (getServiceConfig().appUrl ?? 'https://docs.cloistr.xyz');
 
     link = generateShareLink(
       baseUrl,
