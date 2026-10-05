@@ -22,8 +22,10 @@ Both containers ran the same image id. The last row is the control: it shows the
 one-year caching rule genuinely is in force, which is what makes the `no-store`
 on the row above it meaningful rather than vacuous.
 
-The proof harness is in this session's working area, not in any app's tree, and
-its README says how to re-run it.
+The proof harness is deliberately not in any app's tree. It lives at
+`/tmp/claude-1000/-home-forgemaster-arbiter-cloistr-research/51b9d58d-b581-41b8-a385-a171c1de138a/scratchpad/runtime-config-proof`,
+and its README says how to re-run it and how to refresh the reader it tests.
+Copy it somewhere durable if it is worth keeping.
 
 ## What you get
 
