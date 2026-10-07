@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness.js';
 import { Event, UnsignedEvent, Relay, type VerifiedEvent } from 'nostr-tools';
+import { boundedPublish, boundedAuth } from '../relay/bounded-publish.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { SyncProvider, NostrSyncConfig, NostrUpdateMessage } from './types.js';
@@ -446,23 +447,17 @@ export class NostrSyncProvider implements SyncProvider {
     }
     const event = await this.createEvent(kind, content, tags);
     try {
-      await relay.publish(event);
+      await boundedPublish(relay, event);
       return;
     } catch (error) {
-      // NIP-42: the relay will only say it wants auth when we try to publish,
-      // so authenticate on demand and retry once. Without this, every publish
-      // to an auth-gated relay fails — which is what silently broke whiteboard
-      // saves and the space contacts import (observed 2026-08-02: the relay
-      // answered "auth-required: authentication required to publish events"
-      // and nothing ever responded to the challenge).
       if (isAuthRequired(error)) {
         await this.authenticate();
-        await relay.publish(event);
+        await boundedPublish(relay, event);
         return;
       }
       const needed = parsePoWRequirement(error);
       if (needed === null) {
-        throw error; // Neither an auth nor a PoW rejection — surface unchanged.
+        throw error;
       }
       if (needed > NostrSyncProvider.MAX_POW_DIFFICULTY) {
         throw new Error(
@@ -470,16 +465,13 @@ export class NostrSyncProvider implements SyncProvider {
             `${NostrSyncProvider.MAX_POW_DIFFICULTY}; refusing to mine`
         );
       }
-      // Re-mine to the exact difficulty the relay asked for, then retry once.
       const mined = await this.createEvent(kind, content, tags, needed);
       try {
-        await relay.publish(mined);
+        await boundedPublish(relay, mined);
       } catch (retryError) {
-        // A relay can gate on both: PoW first, then auth. Handle that ordering
-        // rather than failing on the second gate after clearing the first.
         if (!isAuthRequired(retryError)) throw retryError;
         await this.authenticate();
-        await relay.publish(mined);
+        await boundedPublish(relay, mined);
       }
     }
   }
@@ -503,14 +495,8 @@ export class NostrSyncProvider implements SyncProvider {
     }
     const pubkey = this.pubkey;
     const signer = this.config.signer;
-    await relay.auth(async (authEvent) => {
-      // nostr-tools hands us an EventTemplate (no pubkey); the signer wants a
-      // full UnsignedEvent, so attach the identity we already authenticated as.
+    await boundedAuth(relay, async (authEvent) => {
       const signed = await signer.signEvent({ ...authEvent, pubkey });
-      // nostr-tools brands events it verified itself with an internal symbol.
-      // Our signer returns a genuinely signed event without that marker, and
-      // the relay verifies the signature regardless — so the cast asserts the
-      // brand, not the validity.
       return signed as VerifiedEvent;
     });
     const firstAuth = !this.authenticated;

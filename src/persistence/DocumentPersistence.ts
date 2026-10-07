@@ -20,6 +20,7 @@ import {
 } from './types.js';
 import { isAuthRequired } from './relay-errors.js';
 import { nextCreatedAt } from '../relay/created-at.js';
+import { boundedPublish, boundedAuth } from '../relay/bounded-publish.js';
 
 const SNAPSHOT_KIND = 30078; // NIP-78 application-specific data
 const APP_VERSION = '1.0.0';
@@ -359,29 +360,17 @@ export class DocumentPersistence {
       const signedEvent = await this.config.signer.signEvent(unsignedEvent);
 
       try {
-        await relay.publish(signedEvent);
+        await boundedPublish(relay, signedEvent);
       } catch (error) {
         if (!isAuthRequired(error)) throw error;
 
-        // NIP-42: relay demands authentication before publishing.
-        // Authenticate once, then retry the publish.
         const pubkey = this.pubkey!;
         const signer = this.config.signer;
-        await Promise.race([
-          relay.auth(async (authEvent) => {
-            const signed = await signer.signEvent({ ...authEvent, pubkey });
-            // nostr-tools brands events it verified itself; ours is legitimately
-            // signed — cast asserts the brand without re-verifying.
-            return signed as VerifiedEvent;
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('[Persistence] NIP-42 auth timed out after 10s')),
-              10000
-            )
-          ),
-        ]);
-        await relay.publish(signedEvent);
+        await boundedAuth(relay, async (authEvent) => {
+          const signed = await signer.signEvent({ ...authEvent, pubkey });
+          return signed as VerifiedEvent;
+        });
+        await boundedPublish(relay, signedEvent);
       }
 
       return signedEvent.id;

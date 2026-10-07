@@ -43,6 +43,15 @@ export {
   isAuthRequired,
 } from './crdt/provider.js';
 
+export {
+  boundedPublish,
+  boundedAuth,
+  AuthSignerError,
+  PublishTimeoutError,
+  PUBLISH_TIMEOUT_MS,
+  AUTH_TIMEOUT_MS,
+} from './relay/bounded-publish.js';
+
 // ── Persistence ─────────────────────────────────────────────────────────────
 export type {
   PersistenceConfig,
