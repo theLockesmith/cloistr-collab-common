@@ -1,6 +1,6 @@
 {
   "name": "@cloistr/collab-common",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Shared collaboration infrastructure for Cloistr apps",
   "type": "module",
   "main": "dist/index.js",
