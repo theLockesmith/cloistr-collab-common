@@ -173,6 +173,14 @@ describe('boundedPoolPublish', () => {
     await expect(results[0]).rejects.toThrow('blocked: not allowed');
   });
 
+  it('returns empty array when no relays are given', async () => {
+    const pool = fakePool(() => []);
+    const results = boundedPoolPublish(pool, [], event);
+    expect(results).toHaveLength(0);
+    const settled = await settlePoolPublish([], results);
+    expect(settled).toEqual({ accepted: [], rejected: [], timedOut: [] });
+  });
+
   it('works without onauth', async () => {
     const publishSpy = vi.fn(() => [Promise.resolve('ok')]);
     const pool = fakePool(publishSpy);
