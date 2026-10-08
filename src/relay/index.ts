@@ -38,6 +38,19 @@ export {
   useRelayPrefsHook,
 } from './hooks.js';
 
+// Export bounded publish/auth utilities
+export {
+  boundedPublish,
+  boundedAuth,
+  boundedPoolPublish,
+  settlePoolPublish,
+  AuthSignerError,
+  PublishTimeoutError,
+  PUBLISH_TIMEOUT_MS,
+  AUTH_TIMEOUT_MS,
+} from './bounded-publish.js';
+export type { PublishablePool, PoolPublishResult } from './bounded-publish.js';
+
 // Export timestamp monotonicity for replaceable events
 export { nextCreatedAt } from './created-at.js';
 

@@ -46,11 +46,14 @@ export {
 export {
   boundedPublish,
   boundedAuth,
+  boundedPoolPublish,
+  settlePoolPublish,
   AuthSignerError,
   PublishTimeoutError,
   PUBLISH_TIMEOUT_MS,
   AUTH_TIMEOUT_MS,
 } from './relay/bounded-publish.js';
+export type { PublishablePool, PoolPublishResult } from './relay/bounded-publish.js';
 
 // ── Persistence ─────────────────────────────────────────────────────────────
 export type {
