@@ -73,12 +73,7 @@ export class HeadlessCollabClient {
       signer: this.config.signer,
     });
 
-    let loadResult: LoadResult;
-    try {
-      loadResult = await this.persistence.load();
-    } catch {
-      loadResult = { found: false };
-    }
+    const loadResult = await this.persistence.load();
 
     const syncConfig: NostrSyncConfig = {
       signer: this.config.signer,

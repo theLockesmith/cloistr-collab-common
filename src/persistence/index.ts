@@ -21,6 +21,7 @@ export {
   PersistenceError,
   SnapshotNotFoundError,
   BlobDownloadError,
+  LoadTimeoutError,
 } from './types.js';
 
 // Core functionality

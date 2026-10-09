@@ -16,6 +16,7 @@ import {
   PersistenceError,
   SnapshotNotFoundError,
   BlobDownloadError,
+  LoadTimeoutError,
   DocumentType,
 } from './types.js';
 import { isAuthRequired } from './relay-errors.js';
@@ -37,6 +38,7 @@ export class DocumentPersistence {
   private lastSaveHash: string | null = null;
   private isDirty = false;
   private pubkey: string | null = null;
+  private _loadCompleted = false;
 
   /** Document title (user-editable) */
   private _title: string;
@@ -64,11 +66,6 @@ export class DocumentPersistence {
 
     // Track document changes
     this.doc.on('update', this.handleUpdate.bind(this));
-
-    // Start auto-save if configured
-    if (config.autoSaveInterval && config.autoSaveInterval > 0) {
-      this.startAutoSave(config.autoSaveInterval);
-    }
   }
 
   /**
@@ -124,6 +121,9 @@ export class DocumentPersistence {
    * Save the current document state to Blossom
    */
   async save(): Promise<SaveResult> {
+    if (!this._loadCompleted) {
+      throw new PersistenceError('Cannot save: document load has not completed');
+    }
     if (!this.pubkey) {
       await this.init();
     }
@@ -183,6 +183,8 @@ export class DocumentPersistence {
 
       if (!snapshotEvent) {
         console.log(`[Persistence] No snapshot found for: ${this.config.documentId}`);
+        this._loadCompleted = true;
+        this.startDeferredAutoSave();
         return { found: false };
       }
 
@@ -225,6 +227,8 @@ export class DocumentPersistence {
         eventId: snapshotEvent.id,
       };
 
+      this._loadCompleted = true;
+      this.startDeferredAutoSave();
       this.onLoad?.(result);
       return result;
 
@@ -285,6 +289,12 @@ export class DocumentPersistence {
         }
       }
     }, intervalMs);
+  }
+
+  private startDeferredAutoSave(): void {
+    if (this.config.autoSaveInterval && this.config.autoSaveInterval > 0) {
+      this.startAutoSave(this.config.autoSaveInterval);
+    }
   }
 
   /**
@@ -409,7 +419,7 @@ export class DocumentPersistence {
       };
 
       // await (not return) so the finally block runs AFTER the Promise settles.
-      const result = await new Promise<Event | null>((resolve) => {
+      const result = await new Promise<Event | null>((resolve, reject) => {
         let found: Event | null = null;
 
         const sub = relay.subscribe([filter], {
@@ -425,10 +435,13 @@ export class DocumentPersistence {
           },
         });
 
-        // Timeout after 10 seconds
         setTimeout(() => {
           sub.close();
-          resolve(found);
+          if (found) {
+            resolve(found);
+          } else {
+            reject(new LoadTimeoutError(this.config.documentId, this.config.relayUrl));
+          }
         }, 10000);
       });
 

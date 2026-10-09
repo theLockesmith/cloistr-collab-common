@@ -106,3 +106,10 @@ export class BlobDownloadError extends PersistenceError {
     this.name = 'BlobDownloadError';
   }
 }
+
+export class LoadTimeoutError extends PersistenceError {
+  constructor(documentId: string, relayUrl: string) {
+    super(`Relay query timed out for document "${documentId}" (relay: ${relayUrl})`);
+    this.name = 'LoadTimeoutError';
+  }
+}
