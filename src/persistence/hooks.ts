@@ -52,6 +52,8 @@ export function useDocumentPersistence(
     autoLoad?: boolean;
     /** Auto-save interval (0 = disabled) */
     autoSaveInterval?: number;
+    /** Active pubkey: triggers re-init when identity changes */
+    activePubkey?: string | null;
   }
 ): [PersistenceState, PersistenceControls] {
   const [state, setState] = useState<PersistenceState>({
@@ -119,11 +121,14 @@ export function useDocumentPersistence(
       persistenceRef.current = persistence;
       setState(prev => ({ ...prev, initialized: true }));
 
-      // Auto-load if enabled
       if (options?.autoLoad) {
         setState(prev => ({ ...prev, loading: true }));
-        persistence.load().catch(() => {
-          // Ignore load errors for new documents
+        persistence.load().catch((error) => {
+          setState(prev => ({
+            ...prev,
+            loading: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          }));
         });
       }
     });
@@ -133,7 +138,7 @@ export function useDocumentPersistence(
       persistence.destroy();
       persistenceRef.current = null;
     };
-  }, [doc, config?.documentId, config?.blossomUrl, config?.relayUrl]);
+  }, [doc, config?.documentId, config?.blossomUrl, config?.relayUrl, options?.activePubkey]);
 
   const save = useCallback(async (): Promise<SaveResult> => {
     const persistence = persistenceRef.current;
