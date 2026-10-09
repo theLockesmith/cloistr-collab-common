@@ -7,6 +7,8 @@ import * as Y from 'yjs';
 import { DocumentPersistence } from './DocumentPersistence.js';
 import type { PersistenceConfig, SaveResult, LoadResult } from './types.js';
 
+export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'failed';
+
 /**
  * Persistence state
  */
@@ -17,11 +19,15 @@ export interface PersistenceState {
   saving: boolean;
   /** Whether currently loading */
   loading: boolean;
+  /** Load lifecycle: idle -> loading -> loaded | failed */
+  loadStatus: LoadStatus;
+  /** Load error, separate from save errors */
+  loadError: Error | null;
   /** Whether document has unsaved changes */
   dirty: boolean;
   /** Last save result */
   lastSave: SaveResult | null;
-  /** Last error */
+  /** Last save error (load errors go in loadError) */
   error: Error | null;
 }
 
@@ -60,6 +66,8 @@ export function useDocumentPersistence(
     initialized: false,
     saving: false,
     loading: false,
+    loadStatus: 'idle',
+    loadError: null,
     dirty: false,
     lastSave: null,
     error: null,
@@ -92,8 +100,9 @@ export function useDocumentPersistence(
       setState(prev => ({
         ...prev,
         loading: false,
+        loadStatus: 'loaded',
+        loadError: null,
         dirty: false,
-        error: null,
       }));
     };
 
@@ -122,14 +131,26 @@ export function useDocumentPersistence(
       setState(prev => ({ ...prev, initialized: true }));
 
       if (options?.autoLoad) {
-        setState(prev => ({ ...prev, loading: true }));
-        persistence.load().catch((error) => {
-          setState(prev => ({
-            ...prev,
-            loading: false,
-            error: error instanceof Error ? error : new Error(String(error)),
-          }));
-        });
+        setState(prev => ({ ...prev, loading: true, loadStatus: 'loading' }));
+        persistence.load()
+          .then(() => {
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              loadStatus: 'loaded',
+              loadError: null,
+              dirty: false,
+            }));
+          })
+          .catch((error) => {
+            const err = error instanceof Error ? error : new Error(String(error));
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              loadStatus: 'failed',
+              loadError: err,
+            }));
+          });
       }
     });
 
@@ -147,7 +168,13 @@ export function useDocumentPersistence(
     }
 
     setState(prev => ({ ...prev, saving: true, error: null }));
-    return persistence.save();
+    try {
+      return await persistence.save();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      setState(prev => ({ ...prev, saving: false, error: err }));
+      throw error;
+    }
   }, []);
 
   const load = useCallback(async (): Promise<LoadResult> => {
@@ -156,8 +183,27 @@ export function useDocumentPersistence(
       throw new Error('Persistence not initialized');
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    return persistence.load();
+    setState(prev => ({ ...prev, loading: true, loadStatus: 'loading', loadError: null }));
+    try {
+      const result = await persistence.load();
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        loadStatus: 'loaded',
+        loadError: null,
+        dirty: false,
+      }));
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        loadStatus: 'failed',
+        loadError: err,
+      }));
+      throw error;
+    }
   }, []);
 
   const exists = useCallback(async (): Promise<boolean> => {
@@ -196,7 +242,7 @@ export function usePersistenceUI(
 ) {
   const [state, controls] = useDocumentPersistence(doc, config, {
     autoLoad: true,
-    autoSaveInterval: 30000, // Auto-save every 30 seconds
+    autoSaveInterval: 30000,
   });
 
   const saveButtonProps = {

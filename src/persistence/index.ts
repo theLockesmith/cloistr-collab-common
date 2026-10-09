@@ -37,6 +37,7 @@ export {
 } from './hooks.js';
 
 export type {
+  LoadStatus,
   PersistenceState,
   PersistenceControls,
 } from './hooks.js';
