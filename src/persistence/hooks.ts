@@ -6,8 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Y from 'yjs';
 import { DocumentPersistence } from './DocumentPersistence.js';
 import type { PersistenceConfig, SaveResult, LoadResult } from './types.js';
-
-export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'failed';
+import type { LoadStatus } from './session.js';
 
 /**
  * Persistence state
@@ -103,15 +102,6 @@ export function useDocumentPersistence(
         loadStatus: 'loaded',
         loadError: null,
         dirty: false,
-      }));
-    };
-
-    persistence.onError = (error) => {
-      setState(prev => ({
-        ...prev,
-        saving: false,
-        loading: false,
-        error,
       }));
     };
 
