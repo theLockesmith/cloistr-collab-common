@@ -17,9 +17,11 @@ import {
   SnapshotNotFoundError,
   BlobDownloadError,
   LoadTimeoutError,
+  RelayRejectionError,
+  UploadTimeoutError,
   DocumentType,
 } from './types.js';
-import { isAuthRequired } from './relay-errors.js';
+import { isAuthRequired, isRateLimited, getRelayRejectionReason } from './relay-errors.js';
 import { nextCreatedAt } from '../relay/created-at.js';
 import { boundedPublish, boundedAuth } from '../relay/bounded-publish.js';
 
@@ -135,9 +137,19 @@ export class DocumentPersistence {
       const stateUpdate = Y.encodeStateAsUpdate(this.doc);
       console.log(`[Persistence] Serialized ${stateUpdate.byteLength} bytes`);
 
-      // Upload to Blossom
+      // Upload to Blossom (bounded to prevent infinite hang)
+      const UPLOAD_TIMEOUT_MS = 60_000;
       const storageSigner = this.createStorageSigner();
-      const metadata = await this.blobStore.upload(stateUpdate, MIME_TYPE, storageSigner);
+      let uploadTimer: ReturnType<typeof setTimeout>;
+      const metadata = await Promise.race([
+        this.blobStore.upload(stateUpdate, MIME_TYPE, storageSigner),
+        new Promise<never>((_, reject) => {
+          uploadTimer = setTimeout(
+            () => reject(new UploadTimeoutError(UPLOAD_TIMEOUT_MS)),
+            UPLOAD_TIMEOUT_MS,
+          );
+        }),
+      ]).finally(() => clearTimeout(uploadTimer!));
       console.log(`[Persistence] Uploaded to Blossom: ${metadata.hash}`);
 
       // Publish Nostr event with snapshot reference
@@ -158,6 +170,13 @@ export class DocumentPersistence {
       return result;
 
     } catch (error) {
+      if (
+        error instanceof RelayRejectionError ||
+        error instanceof UploadTimeoutError
+      ) {
+        this.onError?.(error);
+        throw error;
+      }
       const err = new PersistenceError(
         `Failed to save document: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error : undefined
@@ -373,21 +392,34 @@ export class DocumentPersistence {
 
       const signedEvent = await this.config.signer.signEvent(unsignedEvent);
 
-      try {
-        await boundedPublish(relay, signedEvent);
-      } catch (error) {
-        if (!isAuthRequired(error)) throw error;
-
-        const pubkey = this.pubkey!;
-        const signer = this.config.signer;
-        await boundedAuth(relay, async (authEvent) => {
-          const signed = await signer.signEvent({ ...authEvent, pubkey });
-          return signed as VerifiedEvent;
-        });
-        await boundedPublish(relay, signedEvent);
+      const MAX_RETRIES = 3;
+      let authed = false;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          await boundedPublish(relay, signedEvent);
+          return signedEvent.id;
+        } catch (error) {
+          if (isAuthRequired(error) && !authed) {
+            const pubkey = this.pubkey!;
+            const signer = this.config.signer;
+            await boundedAuth(relay, async (authEvent) => {
+              const signed = await signer.signEvent({ ...authEvent, pubkey });
+              return signed as VerifiedEvent;
+            });
+            authed = true;
+            continue;
+          }
+          if (isRateLimited(error) && attempt < MAX_RETRIES) {
+            const delay = 1000 * Math.pow(2, attempt);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+          const reason = getRelayRejectionReason(error);
+          if (reason) throw new RelayRejectionError(reason);
+          throw error;
+        }
       }
-
-      return signedEvent.id;
+      throw new RelayRejectionError('rate-limited: retries exhausted');
 
     } finally {
       await relay.close();

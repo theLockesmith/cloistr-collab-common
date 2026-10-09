@@ -22,6 +22,8 @@ export {
   SnapshotNotFoundError,
   BlobDownloadError,
   LoadTimeoutError,
+  RelayRejectionError,
+  UploadTimeoutError,
 } from './types.js';
 
 // Core functionality
