@@ -113,3 +113,19 @@ export class LoadTimeoutError extends PersistenceError {
     this.name = 'LoadTimeoutError';
   }
 }
+
+export class RelayRejectionError extends PersistenceError {
+  public readonly reason: string;
+  constructor(reason: string) {
+    super(`Relay rejected event: ${reason}`);
+    this.name = 'RelayRejectionError';
+    this.reason = reason;
+  }
+}
+
+export class UploadTimeoutError extends PersistenceError {
+  constructor(timeoutMs: number) {
+    super(`Blob upload timed out after ${timeoutMs}ms`);
+    this.name = 'UploadTimeoutError';
+  }
+}

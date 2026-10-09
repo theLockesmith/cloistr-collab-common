@@ -22,6 +22,8 @@ export {
   SnapshotNotFoundError,
   BlobDownloadError,
   LoadTimeoutError,
+  RelayRejectionError,
+  UploadTimeoutError,
 } from './types.js';
 
 // Core functionality
@@ -37,7 +39,18 @@ export {
 } from './hooks.js';
 
 export type {
-  LoadStatus,
   PersistenceState,
   PersistenceControls,
 } from './hooks.js';
+
+// Plain session (testable without React)
+export {
+  createPersistenceSession,
+  initialSessionState,
+} from './session.js';
+
+export type {
+  LoadStatus,
+  PersistenceSessionState,
+  PersistenceSession,
+} from './session.js';

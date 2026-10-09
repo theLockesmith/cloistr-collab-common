@@ -22,12 +22,34 @@
  * The prefix is checked rather than the prose, which is relay-specific and not
  * contractual.
  */
+function extractMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof (error as { reason?: unknown }).reason === 'string') {
+    return (error as { reason: string }).reason;
+  }
+  return '';
+}
+
 export function isAuthRequired(error: unknown): boolean {
-  const msg =
-    error instanceof Error ? error.message
-    : typeof error === 'string' ? error
-    : error && typeof (error as { reason?: unknown }).reason === 'string'
-      ? (error as { reason: string }).reason
-    : '';
-  return /^\s*auth-required:/i.test(msg);
+  return /^\s*auth-required:/i.test(extractMessage(error));
+}
+
+export function isRateLimited(error: unknown): boolean {
+  return /^\s*rate-limited:/i.test(extractMessage(error));
+}
+
+const REJECTION_PREFIXES = [
+  'rate-limited', 'blocked', 'restricted', 'pow',
+  'invalid', 'error', 'duplicate',
+];
+
+export function getRelayRejectionReason(error: unknown): string | null {
+  const msg = extractMessage(error);
+  for (const prefix of REJECTION_PREFIXES) {
+    if (new RegExp(`^\\s*${prefix}:`, 'i').test(msg)) {
+      return msg.trim();
+    }
+  }
+  return null;
 }
