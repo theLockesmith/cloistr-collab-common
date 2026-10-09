@@ -233,7 +233,11 @@ export class DocumentPersistence {
       return result;
 
     } catch (error) {
-      if (error instanceof SnapshotNotFoundError || error instanceof BlobDownloadError) {
+      if (
+        error instanceof SnapshotNotFoundError ||
+        error instanceof BlobDownloadError ||
+        error instanceof LoadTimeoutError
+      ) {
         this.onError?.(error);
         throw error;
       }
@@ -422,27 +426,33 @@ export class DocumentPersistence {
       const result = await new Promise<Event | null>((resolve, reject) => {
         let found: Event | null = null;
 
+        let done = false;
+        const finish = (answered: boolean) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          try { sub.close(); } catch { /* closed socket */ }
+          if (found) {
+            resolve(found);
+          } else if (answered) {
+            resolve(null);
+          } else {
+            reject(new LoadTimeoutError(this.config.documentId, this.config.relayUrl));
+          }
+        };
+
         const sub = relay.subscribe([filter], {
           onevent: (event: Event) => {
-            // Keep the most recent event
             if (!found || event.created_at > found.created_at) {
               found = event;
             }
           },
-          oneose: () => {
-            sub.close();
-            resolve(found);
-          },
+          oneose: () => finish(true),
+          onclose: () => finish(false),
+          eoseTimeout: 100000,
         });
 
-        setTimeout(() => {
-          sub.close();
-          if (found) {
-            resolve(found);
-          } else {
-            reject(new LoadTimeoutError(this.config.documentId, this.config.relayUrl));
-          }
-        }, 10000);
+        const timer = setTimeout(() => finish(false), 10000);
       });
 
       return result;
