@@ -93,10 +93,14 @@ function relayWithEose(scenario: 'found' | 'empty') {
 
 function stateTracker() {
   let state = initialSessionState();
+  const statusHistory: PersistenceSessionState['loadStatus'][] = [state.loadStatus];
   const update = (fn: (prev: PersistenceSessionState) => PersistenceSessionState) => {
     state = fn(state);
+    if (statusHistory[statusHistory.length - 1] !== state.loadStatus) {
+      statusHistory.push(state.loadStatus);
+    }
   };
-  return { get: () => state, update };
+  return { get: () => state, update, statusHistory };
 }
 
 describe('createPersistenceSession', () => {
@@ -150,6 +154,8 @@ describe('createPersistenceSession', () => {
     await assertion;
     expect(tracker.get().loadStatus).toBe('failed');
     expect(tracker.get().loadError).toBeInstanceOf(LoadTimeoutError);
+    expect(tracker.statusHistory).not.toContain('loaded');
+    expect(tracker.statusHistory).toEqual(['idle', 'loading', 'failed']);
     vi.useRealTimers();
     session.destroy();
   });
