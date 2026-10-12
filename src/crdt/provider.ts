@@ -49,6 +49,15 @@ export function isAuthRequired(error: unknown): boolean {
   return /^\s*auth-required:/i.test(msg);
 }
 
+function isRateLimited(error: unknown): boolean {
+  const msg =
+    error instanceof Error ? error.message
+    : typeof error === 'string' ? error
+    : error && typeof (error as { reason?: unknown }).reason === 'string' ? (error as { reason: string }).reason
+    : '';
+  return /^\s*rate-limited:/i.test(msg);
+}
+
 /**
  * Browser+Node-safe base64 for Yjs updates. Node's `Buffer` is not defined in
  * the browser (surfaced as "ReferenceError: Buffer is not defined" in NostrSync
@@ -91,6 +100,14 @@ export class NostrSyncProvider implements SyncProvider {
   private messageBuffer: Uint8Array[] = [];
   private lastHeartbeat = 0;
   private pubkey: string | null = null;
+
+  private static readonly BASE_FLUSH_INTERVAL_MS = 150;
+  private static readonly MAX_FLUSH_INTERVAL_MS = 1000;
+
+  private pendingUpdates: Uint8Array[] = [];
+  private rejectedUpdates: Uint8Array[] = [];
+  private flushTimer: NodeJS.Timeout | null = null;
+  private flushIntervalMs = NostrSyncProvider.BASE_FLUSH_INTERVAL_MS;
 
   // Event kind for collaborative updates (ephemeral)
   private static readonly UPDATE_KIND = 25078; // Ephemeral collab update
@@ -229,15 +246,79 @@ export class NostrSyncProvider implements SyncProvider {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
   }
 
-  private async handleLocalUpdate(update: Uint8Array, origin: any): Promise<void> {
-    // Don't broadcast updates that came from the network
-    if (origin === this) {
+  private handleLocalUpdate(update: Uint8Array, origin: any): void {
+    if (origin === this) return;
+
+    this.pendingUpdates.push(update);
+    if (!this.flushTimer) {
+      this.flushPendingUpdates();
+    }
+  }
+
+  private flushPendingUpdates(): void {
+    if (this.pendingUpdates.length === 0 && this.rejectedUpdates.length === 0) return;
+
+    const allUpdates = [...this.rejectedUpdates, ...this.pendingUpdates];
+    this.pendingUpdates = [];
+    this.rejectedUpdates = [];
+
+    const merged = allUpdates.length === 1 ? allUpdates[0] : Y.mergeUpdates(allUpdates);
+    this.publishMergedUpdate(merged);
+
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      if (this.pendingUpdates.length > 0 || this.rejectedUpdates.length > 0) {
+        this.flushPendingUpdates();
+      }
+    }, this.flushIntervalMs);
+  }
+
+  private async publishMergedUpdate(merged: Uint8Array): Promise<void> {
+    if (!this.isConnected || !this.relay) {
+      this.messageBuffer.push(merged);
       return;
     }
 
-    await this.sendUpdate(update);
+    try {
+      const message: NostrUpdateMessage = {
+        docId: this.config.docId,
+        update: bytesToBase64(merged),
+        timestamp: Date.now(),
+        sender: this.getClientId(),
+        room: this.config.roomPubkey,
+      };
+
+      await this.publishWithPoWRetry(
+        NostrSyncProvider.UPDATE_KIND,
+        JSON.stringify(message),
+        this.getEventTags(),
+      );
+
+      this.flushIntervalMs = NostrSyncProvider.BASE_FLUSH_INTERVAL_MS;
+    } catch (error) {
+      if (isRateLimited(error)) {
+        this.rejectedUpdates.push(merged);
+        this.flushIntervalMs = Math.min(
+          this.flushIntervalMs * 2,
+          NostrSyncProvider.MAX_FLUSH_INTERVAL_MS,
+        );
+        if (!this.flushTimer) {
+          this.flushTimer = setTimeout(() => {
+            this.flushTimer = null;
+            this.flushPendingUpdates();
+          }, this.flushIntervalMs);
+        }
+        return;
+      }
+      console.error('[NostrSync] Failed to send update:', error);
+      this.onError?.(error as Error);
+    }
   }
 
   private subscribeToUpdates(): void {
