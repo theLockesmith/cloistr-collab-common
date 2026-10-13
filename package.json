@@ -73,7 +73,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cloistr/auth": "^1.1.0",
+    "@cloistr/auth": "^1.4.1",
     "@noble/hashes": "^2.4.0",
     "@types/libsodium-wrappers": "^0.8.2",
     "lib0": "^0.2.119",
